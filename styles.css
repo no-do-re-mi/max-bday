@@ -87,14 +87,14 @@ fieldset { margin: 0; padding: 0; border: 0; }
 /* anchored only in the top and bottom bands — never the middle,
    where the nowrap headline spans nearly the full width. insets
    allow for each object's rotated bounding box. */
-.f1 { top: 5%;    left: 2%;   width: clamp(70px, 11vw, 120px);  height: clamp(70px, 11vw, 120px);  animation: orbit1 50s ease-in-out infinite; }
-.f2 { top: 5%;    right: 27%; width: clamp(52px, 8vw, 92px);    height: clamp(52px, 8vw, 92px);    opacity: .85; animation: orbit2 60.8s ease-in-out infinite; }
-.f3 { top: 5%;    right: 2%;  width: clamp(84px, 13vw, 140px);  animation: orbit4 53.3s ease-in-out infinite; }
-.f4 { top: 5%;    left: 34%;  width: clamp(50px, 7.5vw, 84px);  opacity: .85; animation: orbit6 56.7s ease-in-out infinite -37.5s; }
-.f5 { bottom: 8%; left: 3%;   width: clamp(96px, 15vw, 160px);  animation: orbit3 64.2s ease-in-out infinite -50s; }
-.f6 { bottom: 7%; right: 5%;  width: clamp(66px, 10vw, 110px);  opacity: .9;  animation: orbit2 72.5s ease-in-out infinite -16.7s; }
-.f7 { bottom: 8%; right: 29%; width: clamp(64px, 10vw, 110px);  animation: orbit5 68.3s ease-in-out infinite -25s; }
-.f8 { bottom: 6%; left: 30%;  width: clamp(38px, 5.5vw, 58px);  height: clamp(38px, 5.5vw, 58px);  opacity: .75; animation: orbit3 43.3s ease-in-out infinite; }
+.f1 { top: 5%;    left: 2%;   width: clamp(70px, 11vw, 120px);  height: clamp(70px, 11vw, 120px);  animation: orbit1 40s ease-in-out infinite; }
+.f2 { top: 5%;    right: 27%; width: clamp(52px, 8vw, 92px);    height: clamp(52px, 8vw, 92px);    opacity: .85; animation: orbit2 50s ease-in-out infinite; }
+.f3 { top: 5%;    right: 2%;  width: clamp(84px, 13vw, 140px);  animation: orbit4 60s ease-in-out infinite; }
+.f4 { top: 5%;    left: 34%;  width: clamp(50px, 7.5vw, 84px);  opacity: .85; animation: orbit6 40s ease-in-out infinite -26.5s; }
+.f5 { bottom: 8%; left: 3%;   width: clamp(96px, 15vw, 160px);  animation: orbit3 35s ease-in-out infinite -27.3s; }
+.f6 { bottom: 7%; right: 5%;  width: clamp(66px, 10vw, 110px);  opacity: .9;  animation: orbit2 50s ease-in-out infinite -11.5s; }
+.f7 { bottom: 8%; right: 29%; width: clamp(64px, 10vw, 110px);  animation: orbit5 45s ease-in-out infinite -16.5s; }
+.f8 { bottom: 6%; left: 30%;  width: clamp(38px, 5.5vw, 58px);  height: clamp(38px, 5.5vw, 58px);  opacity: .75; animation: orbit3 35s ease-in-out infinite; }
 
 /* slow zero-g drift: small amplitude (max ±3vw / ±2.2vh), full 360° each loop */
 @keyframes orbit1 {
