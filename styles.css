@@ -285,15 +285,35 @@ fieldset { margin: 0; padding: 0; border: 0; }
   border-radius: 18px;
   background: var(--card);
 }
+/* Avatars get the same sticker treatment as the floating cutouts —
+   saturated, hard-edged, with a die-cut ring and a soft shadow — so an
+   uploaded photo reads as the same kind of object as the presets. */
 .guest-avatar {
+  position: relative;
   width: 46px;
   height: 46px;
   flex: none;
   border-radius: 50%;
   overflow: hidden;
   background: #111;
+  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.55));
 }
-.guest-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.guest-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  filter: saturate(1.25) contrast(1.08);
+}
+/* the die-cut edge, drawn over the image so it survives the circular clip */
+.guest-avatar::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 2px solid var(--primary);
+  border-radius: 50%;
+  pointer-events: none;
+}
 .guest-text { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .guest-name {
   font-size: 14px;
@@ -486,8 +506,18 @@ fieldset { margin: 0; padding: 0; border: 0; }
   padding: 14px 8px;
   border-radius: 18px;
 }
-.tile img { width: 44px; height: 44px; object-fit: contain; }
-.tile img.round { object-fit: cover; border-radius: 50%; }
+.tile img {
+  width: 44px;
+  height: 44px;
+  object-fit: contain;
+  filter: saturate(1.25) contrast(1.08) drop-shadow(0 3px 8px rgba(0, 0, 0, 0.55));
+}
+/* round subjects (venus, an uploaded photo) get the die-cut ring */
+.tile img.round {
+  object-fit: cover;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px var(--primary);
+}
 .tile-upload { position: relative; }
 .tile-upload input[type="file"] {
   position: absolute;
