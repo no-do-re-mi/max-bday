@@ -209,6 +209,29 @@ fieldset { margin: 0; padding: 0; border: 0; }
 }
 .btn-rsvp:hover { background: var(--primary); color: #000; }
 
+/* "see who's coming" is four times the length of "rsvp" — at the design's
+   0.32em tracking the pill would overrun a narrow phone, so it gives back
+   some horizontal padding. */
+.btn-rsvp[data-mode="guests"] {
+  padding-left: clamp(30px, 4.4vw, 78px);
+  padding-right: clamp(30px, 4.4vw, 78px);
+}
+
+/* Escape hatch: two people sharing one phone both need to be able to RSVP. */
+.rsvp-again { margin: 18px 0 0; }
+.rsvp-again button {
+  padding: 6px 4px;
+  border: 0;
+  background: transparent;
+  color: var(--label);
+  font-size: clamp(10px, 1.1vw, 12px);
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color 180ms ease;
+}
+.rsvp-again button:hover { color: var(--primary); }
+
 /* ── who's coming ───────────────────────────────────────────── */
 .guests {
   width: 100%;

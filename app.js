@@ -8,6 +8,7 @@
   };
 
   const LOCAL_KEY = 'max-birthday:local-rsvps';
+  const RSVPED_KEY = 'max-birthday:rsvped';
   const AVATAR_PX = 256;
 
   const $ = (id) => document.getElementById(id);
@@ -17,6 +18,8 @@
     guests:      $('view-guests'),
     guestGrid:   $('guest-grid'),
     guestCount:  $('guest-count'),
+    openRsvp:    $('open-rsvp'),
+    rsvpAgain:   $('rsvp-again'),
     faqTrigger:  $('faq-trigger'),
     faqBody:     $('faq-body'),
     scrim:       $('scrim'),
@@ -73,6 +76,34 @@
     } catch {
       /* private browsing — the guest still shows for this session */
     }
+  }
+
+  /* ── "already rsvp'd" state ───────────────────────────────── */
+
+  function hasRsvped() {
+    try {
+      return Boolean(JSON.parse(localStorage.getItem(RSVPED_KEY) || 'null'));
+    } catch {
+      return false;
+    }
+  }
+
+  function rememberRsvped(going) {
+    try {
+      localStorage.setItem(RSVPED_KEY, JSON.stringify({ at: Date.now(), going }));
+    } catch {
+      // Private browsing. The button just stays on "rsvp" — no worse than before.
+    }
+  }
+
+  // Once this browser has RSVP'd, the hero's call to action is no longer the
+  // form — it's the guest list. Applies to declines too: someone who said no
+  // shouldn't be invited to say it again.
+  function applyRsvpedState() {
+    const done = hasRsvped();
+    el.openRsvp.textContent = done ? 'see who\u2019s coming' : 'rsvp';
+    el.openRsvp.dataset.mode = done ? 'guests' : 'rsvp';
+    el.rsvpAgain.hidden = !done;
   }
 
   async function loadGuests(fresh = false) {
@@ -348,6 +379,8 @@
     }
 
     setBusy(false);
+    rememberRsvped(going);
+    applyRsvpedState();
 
     if (going) {
       const guest = { id, name, avatar: state.avatar, src, plusOne: state.plusOne === true };
@@ -363,7 +396,11 @@
 
   /* ── wiring ───────────────────────────────────────────────── */
 
-  $('open-rsvp').addEventListener('click', openModal);
+  el.openRsvp.addEventListener('click', () => {
+    if (hasRsvped()) showView('guests');
+    else openModal();
+  });
+  $('rsvp-again-btn').addEventListener('click', openModal);
   $('modal-close').addEventListener('click', closeModal);
   $('decline-close').addEventListener('click', closeModal);
   $('go-home').addEventListener('click', () => showView('home'));
@@ -405,6 +442,8 @@
     if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
     else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
   });
+
+  applyRsvpedState();
 
   // Warm the guest list so "who's coming" lands populated.
   loadGuests();
