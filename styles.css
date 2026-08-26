@@ -16,6 +16,13 @@
 }
 @font-face {
   font-family: "Space Mono";
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url("fonts/space-mono-400-italic.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Space Mono";
   font-style: normal;
   font-weight: 700;
   font-display: swap;
@@ -193,8 +200,22 @@ fieldset { margin: 0; padding: 0; border: 0; }
 }
 .details .sep { color: var(--rule); }
 
+/* A wry aside under the hard facts — same family, italic cut, quieter
+   colour and much tighter tracking, so it reads as a different voice
+   rather than another line of the details. */
+.aside {
+  margin: 20px auto 0;
+  max-width: 30ch;
+  font-style: italic;
+  font-size: clamp(11px, 1.5vw, 18px);
+  letter-spacing: 0.06em;
+  line-height: 1.5;
+  color: var(--body);
+  text-wrap: balance;
+}
+
 .btn-rsvp {
-  margin-top: 42px;
+  margin-top: 34px;
   padding: clamp(18px, 2.2vw, 26px) clamp(48px, 6vw, 78px);
   border: 2px solid var(--primary);
   border-radius: 999px;
