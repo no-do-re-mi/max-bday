@@ -146,7 +146,9 @@
 
   function renderGuests() {
     const list = visibleGuests();
-    el.guestCount.textContent = `${list.length} in orbit`;
+    // Heads, not cards: someone bringing a plus one is two people at the party.
+    const heads = list.length + list.filter((g) => g.plusOne).length;
+    el.guestCount.textContent = `${heads} in orbit`;
     el.guestGrid.textContent = '';
 
     if (!list.length) {
