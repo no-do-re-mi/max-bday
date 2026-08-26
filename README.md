@@ -22,8 +22,13 @@ test/               API tests — `npm test`
 
 ## Deploying
 
-The site lives in a subdirectory, so Vercel needs to be pointed at it.
+The site lives in a subdirectory of a repo whose `main` branch is a different
+site, so Vercel needs pointing at both the right branch and the right folder.
 
+0. **Get the code onto `main` first.** Vercel treats the repo's default branch
+   as production, and `main` doesn't have `max-birthday/` on it — deploying
+   before merging gets you a 404. Merge `claude/max-birthday-website-vercel-7bvrd2`
+   into `main`, or change Production Branch under Settings → Git after importing.
 1. **Import the repo** at [vercel.com/new](https://vercel.com/new), picking this
    branch.
 2. Set **Root Directory** to `max-birthday`. Leave Framework Preset on "Other" —
@@ -38,10 +43,11 @@ The site lives in a subdirectory, so Vercel needs to be pointed at it.
 
 6. Project → **Settings** → **Domains** → add `itsmaxsbirthday.com`. Add
    `www.itsmaxsbirthday.com` too; Vercel will redirect one to the other.
-7. Point DNS at Vercel with whoever the domain is registered with. Vercel shows
-   the exact records — usually an `A` record on the apex to `76.76.21.21`, and a
-   `CNAME` on `www` to `cname.vercel-dns.com`. Propagation is typically minutes,
-   but can take a few hours.
+7. Point DNS at Vercel with whoever the domain is registered with. **Use the
+   exact records Vercel shows you** — an `A` record on the apex and a `CNAME` on
+   `www`. Vercel has changed these IPs before, so don't copy them from any
+   older guide, this one included. Propagation is typically minutes, but can
+   take a few hours.
 8. Wait for the domain to show **Valid Configuration** in Vercel, with its
    certificate issued, before sending the link to anyone.
 
