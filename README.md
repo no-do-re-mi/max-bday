@@ -1,5 +1,7 @@
 # celebrating max's birthday
 
+**[itsmaxsbirthday.com](https://itsmaxsbirthday.com)**
+
 Single-page invite site. Hero → RSVP modal → "who's coming" guest list, with
 photographic cutouts drifting in zero gravity behind it all.
 
@@ -32,6 +34,21 @@ The site lives in a subdirectory, so Vercel needs to be pointed at it.
    connect it to the project. That sets `BLOB_READ_WRITE_TOKEN` automatically.
 5. **Redeploy** so the function picks up the token.
 
+### The domain
+
+6. Project → **Settings** → **Domains** → add `itsmaxsbirthday.com`. Add
+   `www.itsmaxsbirthday.com` too; Vercel will redirect one to the other.
+7. Point DNS at Vercel with whoever the domain is registered with. Vercel shows
+   the exact records — usually an `A` record on the apex to `76.76.21.21`, and a
+   `CNAME` on `www` to `cname.vercel-dns.com`. Propagation is typically minutes,
+   but can take a few hours.
+8. Wait for the domain to show **Valid Configuration** in Vercel, with its
+   certificate issued, before sending the link to anyone.
+
+The domain is hardcoded in five places in the `<head>` of `index.html` — the
+canonical link, `og:url`, `og:site_name`, and the two preview-image tags. If it
+ever changes, `grep itsmaxsbirthday.com index.html` finds all of them.
+
 To see the RSVPs, set an `ADMIN_KEY` environment variable to any secret string,
 redeploy, and open `/api/admin?key=YOUR_KEY`. That returns every RSVP with phone
 numbers, plus-ones, a headcount, and everyone's excuses. It's the only endpoint
@@ -40,6 +57,12 @@ yourself.
 
 ### Before it goes out
 
+- Send yourself the link first and check the preview card renders — that's the
+  bit that can't be tested before the domain is live. If it looks wrong, paste
+  the URL into [the Facebook debugger](https://developers.facebook.com/tools/debug/)
+  to see what the scraper actually got, and to force a re-scrape after a fix.
+  iMessage caches previews hard; test in a fresh thread.
+- Do one real RSVP end to end and confirm it shows up at `/api/admin`.
 - The FAQ says "text noemie" — no number is published anywhere on the page.
 - Anyone with the link can RSVP. There's no login, by design.
 
