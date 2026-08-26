@@ -17,6 +17,7 @@ app.js              state machine, validation, API calls
 fonts/              Orbitron 800 + Space Mono 400/700, self-hosted
 assets/             the three cutouts, plus the link-preview card
 api/                serverless functions (see below)
+admin.html          the host's RSVP list (see below)
 test/               API tests — `npm test`
 ```
 
@@ -51,10 +52,17 @@ ever changes, `grep itsmaxsbirthday.com index.html` finds all of them.
 
 ### Reading the RSVPs
 
-Open `/api/admin?key=YOUR_ADMIN_KEY`. That returns every RSVP with phone numbers,
-plus-ones, a headcount, and everyone's excuses. It's the only endpoint that
-exposes phone numbers, and the only one behind a key — so keep the key to
-yourself, and don't paste that URL anywhere shared.
+Go to **`/admin`** and enter your `ADMIN_KEY`. It lists everyone coming with
+tappable phone numbers, plus-ones and avatars, everyone who declined with their
+excuse, and a headcount that counts plus-ones. It can copy all the numbers to
+the clipboard for a group text, or download the lot as CSV. The key is
+remembered in that browser until you hit "forget key", and travels in a header
+rather than the URL so it stays out of browser history and referrers.
+
+The page isn't linked from the invite, but it isn't a secret either — anyone
+with the key reads every phone number. Keep it to yourself.
+
+`/api/admin?key=YOUR_ADMIN_KEY` returns the same data as raw JSON if you want it.
 
 ### Before it goes out
 

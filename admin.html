@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>rsvps — max's birthday</title>
+<link rel="icon" href="/assets/venus.png">
+<link rel="preload" href="fonts/space-mono-400.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/space-mono-700.woff2" as="font" type="font/woff2" crossorigin>
+<style>
+@font-face { font-family:"Orbitron"; font-weight:800; font-display:swap; src:url("fonts/orbitron-800.woff2") format("woff2"); }
+@font-face { font-family:"Space Mono"; font-weight:400; font-display:swap; src:url("fonts/space-mono-400.woff2") format("woff2"); }
+@font-face { font-family:"Space Mono"; font-weight:700; font-display:swap; src:url("fonts/space-mono-700.woff2") format("woff2"); }
+
+:root {
+  --bg:#000; --card:#080808; --panel:#0a0a0a; --white:#fff; --primary:#e8e2d6;
+  --body:#a8a294; --kicker:#8f8a7e; --label:#6a655b; --rule:#4d4941;
+  --border:#2c2a26; --hairline:#23211e;
+  --mono:"Space Mono",ui-monospace,monospace; --display:"Orbitron",ui-sans-serif,system-ui,sans-serif;
+}
+*,*::before,*::after { box-sizing:border-box; }
+body { margin:0; background:var(--bg); color:var(--primary); font-family:var(--mono);
+       padding:48px 5vw 90px; -webkit-font-smoothing:antialiased; }
+button,input { font:inherit; color:inherit; }
+[hidden] { display:none !important; }
+:focus-visible { outline:2px solid var(--primary); outline-offset:3px; }
+
+h1 { margin:0; font-family:var(--display); font-weight:800; font-size:clamp(22px,3.4vw,38px);
+     letter-spacing:.04em; text-transform:uppercase; color:var(--white); text-shadow:0 0 42px rgba(190,210,255,.35); }
+.kicker { margin:0 0 14px; font-size:11px; letter-spacing:.34em; text-transform:uppercase; color:var(--kicker); }
+.wrap { max-width:940px; margin:0 auto; }
+
+.gate { display:flex; flex-direction:column; gap:14px; max-width:420px; margin-top:34px; }
+.gate label { font-size:11px; letter-spacing:.3em; text-transform:uppercase; color:var(--label); }
+input[type=password],input[type=text] { width:100%; padding:15px 17px; border:1px solid var(--border);
+  border-radius:14px; background:#000; color:var(--white); font-size:15px; }
+.btn { padding:14px 30px; border-radius:999px; border:2px solid var(--primary); background:var(--primary);
+  color:#000; font-weight:700; font-size:13px; letter-spacing:.24em; text-transform:uppercase; cursor:pointer; }
+.btn-ghost { background:transparent; color:var(--primary); border:1px solid var(--rule); font-weight:400; }
+.btn-ghost:hover { border-color:var(--primary); }
+.btn:disabled { opacity:.45; cursor:not-allowed; }
+
+.bar { display:flex; flex-wrap:wrap; align-items:center; gap:12px; margin:26px 0 34px; }
+.stats { display:flex; flex-wrap:wrap; gap:10px; margin:28px 0 0; }
+.stat { flex:1 1 150px; padding:16px 18px; border:1px solid var(--hairline); border-radius:16px; background:var(--card); }
+.stat b { display:block; font-family:var(--display); font-weight:800; font-size:26px; color:var(--white);
+          font-variant-numeric:tabular-nums; }
+.stat span { font-size:10px; letter-spacing:.26em; text-transform:uppercase; color:var(--label); }
+
+h2 { margin:44px 0 16px; font-size:12px; letter-spacing:.3em; text-transform:uppercase; color:var(--kicker);
+     border-top:1px solid var(--hairline); padding-top:22px; }
+.rows { display:flex; flex-direction:column; gap:10px; }
+.row { display:flex; align-items:center; gap:14px; padding:13px 16px; border:1px solid var(--hairline);
+       border-radius:16px; background:var(--card); }
+.av { width:42px; height:42px; flex:none; border-radius:50%; overflow:hidden; background:#111;
+      filter:drop-shadow(0 3px 8px rgba(0,0,0,.55)); }
+.av img { width:100%; height:100%; object-fit:cover; filter:saturate(1.25) contrast(1.08); }
+.who { flex:1; min-width:0; display:flex; flex-direction:column; gap:3px; }
+.nm { font-size:14px; letter-spacing:.08em; text-transform:uppercase; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.meta { font-size:11px; letter-spacing:.14em; color:var(--label); }
+.tel { font-size:13px; letter-spacing:.08em; color:var(--primary); text-decoration:none; border-bottom:1px solid var(--rule); white-space:nowrap; }
+.tel:hover { border-color:var(--primary); }
+.plus { flex:none; font-size:10px; letter-spacing:.2em; padding:5px 9px; border-radius:999px;
+        border:1px solid var(--rule); color:var(--body); }
+.excuse { font-size:13px; line-height:1.6; color:var(--body); letter-spacing:.03em; }
+.empty { font-size:12px; letter-spacing:.2em; text-transform:uppercase; color:var(--label); }
+.err { margin-top:16px; font-size:13px; line-height:1.6; color:#e0a09a; }
+.note { margin-top:34px; font-size:11px; line-height:1.9; letter-spacing:.06em; color:var(--label); }
+@media (max-width:560px){ .row{flex-wrap:wrap;} .tel{width:100%;} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p class="kicker">september 12 / 15 sheridan square / 8pm</p>
+  <h1>rsvps</h1>
+
+  <form class="gate" id="gate">
+    <label for="key">admin key</label>
+    <input id="key" type="password" autocomplete="current-password" placeholder="the key you set in vercel">
+    <button class="btn" type="submit">unlock</button>
+    <p class="err" id="err" hidden></p>
+  </form>
+
+  <div id="panel" hidden>
+    <div class="stats">
+      <div class="stat"><b id="s-head">0</b><span>heads coming</span></div>
+      <div class="stat"><b id="s-going">0</b><span>said yes</span></div>
+      <div class="stat"><b id="s-plus">0</b><span>plus ones</span></div>
+      <div class="stat"><b id="s-no">0</b><span>said no</span></div>
+    </div>
+
+    <div class="bar">
+      <button class="btn btn-ghost" id="refresh" type="button">refresh</button>
+      <button class="btn btn-ghost" id="copy" type="button">copy phone numbers</button>
+      <button class="btn btn-ghost" id="csv" type="button">download csv</button>
+      <button class="btn btn-ghost" id="forget" type="button">forget key</button>
+    </div>
+
+    <h2>coming</h2>
+    <div class="rows" id="going"></div>
+
+    <h2>not coming</h2>
+    <div class="rows" id="notgoing"></div>
+
+    <p class="note">
+      this page is not linked from the invite, but it is not secret either — anyone
+      with the key can read every phone number here. keep the key to yourself.
+    </p>
+  </div>
+</div>
+
+<script>
+(() => {
+  'use strict';
+  const KEY_STORE = 'max-birthday:admin-key';
+  const $ = (id) => document.getElementById(id);
+  const AVATARS = { elbow:'assets/elbow.png', venus:'assets/venus.png', hotdog:'assets/hotdog.png' };
+  let data = null;
+
+  const showErr = (m) => { $('err').textContent = m; $('err').hidden = !m; };
+
+  async function load(key) {
+    const res = await fetch('api/admin', { headers: { 'x-admin-key': key }, cache: 'no-store' });
+    if (res.status === 401) throw new Error('That key was not accepted. Check it in Vercel under Settings → Environments → Production.');
+    if (res.status === 503) {
+      const b = await res.json().catch(() => ({}));
+      throw new Error(b.error === 'admin_key_not_set'
+        ? 'No ADMIN_KEY is set on the project yet. Add it in Vercel, redeploy, then try again.'
+        : 'Storage is not connected yet. Connect the Blob store and redeploy.');
+    }
+    if (!res.ok) throw new Error('Could not load RSVPs (error ' + res.status + '). Try again in a moment.');
+    return res.json();
+  }
+
+  function card(r, declining) {
+    const row = document.createElement('div');
+    row.className = 'row';
+
+    if (!declining) {
+      const av = document.createElement('div');
+      av.className = 'av';
+      const img = document.createElement('img');
+      img.src = r.src || AVATARS[r.avatar] || AVATARS.venus;
+      img.alt = '';
+      av.append(img);
+      row.append(av);
+    }
+
+    const who = document.createElement('div');
+    who.className = 'who';
+    const nm = document.createElement('span');
+    nm.className = 'nm';
+    nm.textContent = r.name;
+    who.append(nm);
+
+    if (declining && r.why) {
+      const ex = document.createElement('span');
+      ex.className = 'excuse';
+      ex.textContent = '“' + r.why + '”';
+      who.append(ex);
+    } else if (!declining) {
+      const when = document.createElement('span');
+      when.className = 'meta';
+      when.textContent = r.at ? new Date(r.at).toLocaleString() : '';
+      who.append(when);
+    }
+    row.append(who);
+
+    if (!declining && r.phone) {
+      const a = document.createElement('a');
+      a.className = 'tel';
+      a.href = 'tel:' + r.phone.replace(/[^\d+]/g, '');
+      a.textContent = r.phone;
+      row.append(a);
+    }
+    if (!declining && r.plusOne) {
+      const p = document.createElement('span');
+      p.className = 'plus';
+      p.textContent = '+1';
+      row.append(p);
+    }
+    return row;
+  }
+
+  function render(d) {
+    data = d;
+    const going = d.going || [], no = d.notGoing || [];
+    const plus = going.filter((g) => g.plusOne).length;
+    $('s-head').textContent = d.headcount ?? going.length + plus;
+    $('s-going').textContent = going.length;
+    $('s-plus').textContent = plus;
+    $('s-no').textContent = no.length;
+
+    for (const [id, list, declining] of [['going', going, false], ['notgoing', no, true]]) {
+      const box = $(id);
+      box.textContent = '';
+      if (!list.length) {
+        const e = document.createElement('p');
+        e.className = 'empty';
+        e.textContent = 'nobody yet';
+        box.append(e);
+        continue;
+      }
+      for (const r of list) box.append(card(r, declining));
+    }
+    $('gate').hidden = true;
+    $('panel').hidden = false;
+  }
+
+  async function unlock(key, quiet) {
+    try {
+      showErr('');
+      render(await load(key));
+      try { localStorage.setItem(KEY_STORE, key); } catch {}
+    } catch (e) {
+      if (!quiet) showErr(e.message);
+      try { localStorage.removeItem(KEY_STORE); } catch {}
+    }
+  }
+
+  $('gate').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const k = $('key').value.trim();
+    if (k) unlock(k, false);
+  });
+
+  $('refresh').addEventListener('click', () => {
+    const k = (() => { try { return localStorage.getItem(KEY_STORE); } catch { return null; } })();
+    if (k) unlock(k, false);
+  });
+
+  $('forget').addEventListener('click', () => {
+    try { localStorage.removeItem(KEY_STORE); } catch {}
+    location.reload();
+  });
+
+  $('copy').addEventListener('click', async () => {
+    const nums = (data.going || []).map((g) => g.phone).filter(Boolean).join(', ');
+    try { await navigator.clipboard.writeText(nums); $('copy').textContent = 'copied'; }
+    catch { $('copy').textContent = 'copy failed'; }
+    setTimeout(() => { $('copy').textContent = 'copy phone numbers'; }, 1800);
+  });
+
+  $('csv').addEventListener('click', () => {
+    const esc = (v) => '"' + String(v ?? '').replace(/"/g, '""') + '"';
+    const rows = [['name', 'going', 'phone', 'plus one', 'excuse', 'when']];
+    for (const g of data.going || []) rows.push([g.name, 'yes', g.phone, g.plusOne ? 'yes' : 'no', '', g.at ? new Date(g.at).toISOString() : '']);
+    for (const g of data.notGoing || []) rows.push([g.name, 'no', '', '', g.why, g.at ? new Date(g.at).toISOString() : '']);
+    const blob = new Blob([rows.map((r) => r.map(esc).join(',')).join('\n')], { type: 'text/csv' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'max-birthday-rsvps.csv';
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  });
+
+  // Remembered from last time, so the key isn't retyped on every visit.
+  const saved = (() => { try { return localStorage.getItem(KEY_STORE); } catch { return null; } })();
+  if (saved) unlock(saved, true);
+})();
+</script>
+</body>
+</html>
