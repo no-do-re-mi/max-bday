@@ -1,5 +1,5 @@
 import { put } from '@vercel/blob';
-import { configured, randomId, fail, methodGuard } from './_store.js';
+import { ACCESS, AVATAR_PREFIX, avatarUrl, configured, randomId, fail, methodGuard } from './_store.js';
 
 const ALLOWED = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
 const MAX_BYTES = 600_000; // the client downscales to a 256px square first
@@ -21,12 +21,12 @@ export default async function handler(req, res) {
   if (!bytes.length || bytes.length > MAX_BYTES) return fail(res, 413, 'image_too_large');
 
   try {
-    const blob = await put(`avatars/${randomId()}.${ext}`, bytes, {
-      access: 'public',
+    const blob = await put(`${AVATAR_PREFIX}${randomId()}.${ext}`, bytes, {
+      access: ACCESS,
       contentType: match[1],
       addRandomSuffix: true
     });
-    res.status(201).json({ url: blob.url });
+    res.status(201).json({ path: blob.pathname, url: avatarUrl(blob.pathname) });
   } catch (err) {
     console.error('upload failed', err);
     fail(res, 502, 'upload_failed');

@@ -1,4 +1,4 @@
-import { PUBLIC_PREFIX, PRIVATE_PREFIX, configured, putJson, randomId, fail, methodGuard } from './_store.js';
+import { PUBLIC_PREFIX, PRIVATE_PREFIX, configured, putJson, randomId, avatarUrl, isSafeAvatarPath, fail, methodGuard } from './_store.js';
 
 const PRESETS = ['elbow', 'venus', 'hotdog', 'custom'];
 const clean = (value, max) => String(value ?? '').replace(/\s+/g, ' ').trim().slice(0, max);
@@ -20,9 +20,11 @@ export default async function handler(req, res) {
   const avatar = going && PRESETS.includes(body.avatar) ? body.avatar : null;
   if (going && !avatar) return fail(res, 400, 'avatar_required');
 
-  // Only accept an avatar URL we issued ourselves — never an arbitrary
-  // remote image someone pasted into the request.
-  const src = avatar === 'custom' && isOwnBlobUrl(body.src) ? body.src : null;
+  // Only accept a path inside our own avatars/ prefix, and build the URL here
+  // — never take a URL from the request, which could point anywhere.
+  const src = avatar === 'custom' && isSafeAvatarPath(body.avatarPath)
+    ? avatarUrl(body.avatarPath)
+    : null;
   if (avatar === 'custom' && !src) return fail(res, 400, 'avatar_required');
 
   const id = randomId();
@@ -51,12 +53,3 @@ function safeParse(text) {
   try { return JSON.parse(text); } catch { return null; }
 }
 
-function isOwnBlobUrl(value) {
-  if (typeof value !== 'string') return false;
-  try {
-    const url = new URL(value);
-    return url.protocol === 'https:' && url.hostname.endsWith('.public.blob.vercel-storage.com');
-  } catch {
-    return false;
-  }
-}

@@ -81,20 +81,30 @@ with the key reads every phone number. Keep it to yourself.
 |---|---|---|
 | `/api/guests` | GET | Public guest list. Names, avatars, `+1` flags — nothing else. Cached ~10s; `?fresh=1` bypasses it. |
 | `/api/rsvp` | POST | Records an RSVP. |
-| `/api/upload` | POST | Stores a guest's own profile photo, returns its URL. |
+| `/api/upload` | POST | Stores a guest's own profile photo privately, returns its path. |
+| `/api/avatar` | GET | Streams a stored photo back to the browser. `avatars/` only. |
 | `/api/admin` | GET | Every record, with phone numbers and excuses. Needs `ADMIN_KEY`. |
 | `/api/diag` | GET | Writes, reads back, lists and deletes a test blob, and reports which credential env vars are present. Needs `ADMIN_KEY`. Start here when storage misbehaves. |
 
-Each RSVP is written as **two** blobs: a public card under `guests/` (name,
-avatar, `+1`) and the full record under `rsvps/` (phone number, excuse).
-`/api/guests` only ever reads `guests/`, so a phone number is never one request
-away from the open web. Declines are written only to `rsvps/` — they never reach
-the guest list.
+Each RSVP is written as **two** blobs: a card under `guests/` (name, avatar,
+`+1`) and the full record under `rsvps/` (phone number, excuse). `/api/guests`
+only ever reads `guests/`, so a phone number is never one request away from the
+open web. Declines are written only to `rsvps/` — they never reach the guest
+list.
+
+**Everything is stored with `access: 'private'.'** Nothing in the store is
+fetchable without our credentials — not the records, not the photos. Blob stores
+can be created in a mode that refuses public blobs outright, and private works
+on either kind, so this is both the more compatible and the more private choice.
+Avatars still have to render in a browser, so `/api/avatar?p=…` streams them
+back; it serves only the `avatars/` prefix, so the same endpoint can't be
+pointed at a phone number.
 
 Profile photos are cropped and downscaled to a 256px square in the browser
 before upload, so a 4MB camera roll photo arrives as a few KB. The server only
-accepts JPEG/PNG/WebP under 600KB, and `/api/rsvp` only accepts an avatar URL on
-our own blob host.
+accepts JPEG/PNG/WebP under 600KB. `/api/upload` returns a *path*, and
+`/api/rsvp` accepts only a path inside `avatars/` and builds the URL itself —
+a URL from the request is never trusted.
 
 ### Credentials
 

@@ -12,6 +12,11 @@ const fakePutRef = { fn: null };
 
 function fakePut(pathname, body, opts = {}) {
   if (fakePutRef.fn) return fakePutRef.fn(pathname, body, opts);
+  if (opts.access !== 'private') {
+    return Promise.reject(new Error(
+      'Vercel Blob: Cannot use public access on a private store. The store is configured with private access.'
+    ));
+  }
   putCalls++;
   const suffix = opts.addRandomSuffix ? '-' + Math.random().toString(36).slice(2, 8) : '';
   const dot = pathname.lastIndexOf('.');
@@ -31,16 +36,30 @@ function fakeList({ prefix = '' } = {}) {
 
 function fakeDel(url) { store.delete(url); return Promise.resolve(); }
 
-mock.module('@vercel/blob', { namedExports: { put: fakePut, list: fakeList, del: fakeDel } });
+// Private-store semantics: content is reachable only through get(), by
+// pathname, with credentials — never by fetching the URL.
+function fakeGet(pathname, opts = {}) {
+  if (opts.access !== 'private') {
+    return Promise.reject(new Error('Vercel Blob: Cannot use public access on a private store.'));
+  }
+  const hit = [...store.values()].find((v) => v.pathname === pathname);
+  if (!hit) return Promise.resolve(null);
+  return Promise.resolve({
+    statusCode: 200,
+    stream: new Response(hit.body).body,
+    blob: { pathname, contentType: hit.contentType || 'application/octet-stream' }
+  });
+}
+
+mock.module('@vercel/blob', {
+  namedExports: { put: fakePut, list: fakeList, del: fakeDel, get: fakeGet }
+});
 
 const realFetch = globalThis.fetch;
 globalThis.fetch = (input, init) => {
   const url = typeof input === 'string' ? input : input.url;
-  if (store.has(url)) {
-    const { body, contentType } = store.get(url);
-    return Promise.resolve(new Response(body, { headers: { 'content-type': contentType || 'text/plain' } }));
-  }
-  if (url.startsWith(HOST)) return Promise.resolve(new Response('not found', { status: 404 }));
+  // A private blob is never readable by URL, even if you know it.
+  if (url.startsWith(HOST)) return Promise.resolve(new Response('forbidden', { status: 403 }));
   return realFetch(input, init);
 };
 
@@ -52,13 +71,15 @@ const guests = (await import('../api/guests.js')).default;
 const upload = (await import('../api/upload.js')).default;
 const admin  = (await import('../api/admin.js')).default;
 const diag   = (await import('../api/diag.js')).default;
+const avatar = (await import('../api/avatar.js')).default;
 const { configured } = await import('../api/_store.js');
 
 function mockRes() {
   const res = {
-    statusCode: 0, body: null, headers: {},
+    statusCode: 0, body: null, payload: null, headers: {},
     status(c) { res.statusCode = c; return res; },
     json(b) { res.body = b; return res; },
+    end(b) { res.payload = b; return res; },
     setHeader(k, v) { res.headers[k] = v; return res; }
   };
   return res;
@@ -93,15 +114,21 @@ test('rejects a going RSVP with an unknown avatar', async () => {
   assert.equal(res.body.error, 'avatar_required');
 });
 
-test('rejects a custom avatar pointing at someone else\'s host', async () => {
-  const res = await call(rsvp, post({ ...GOING, avatar: 'custom', src: 'https://evil.example.com/x.png' }));
-  assert.equal(res.statusCode, 400);
-  assert.equal(res.body.error, 'avatar_required');
+test('rejects a custom avatar path outside avatars/', async () => {
+  for (const bad of ['rsvps/secret.json', '../rsvps/secret.json', 'avatars/../rsvps/x.json',
+                     'https://evil.example.com/x.png', '', null]) {
+    const res = await call(rsvp, post({ ...GOING, avatar: 'custom', avatarPath: bad }));
+    assert.equal(res.statusCode, 400, `should reject ${JSON.stringify(bad)}`);
+    assert.equal(res.body.error, 'avatar_required');
+  }
 });
 
-test('accepts a custom avatar on our own blob host', async () => {
-  const res = await call(rsvp, post({ ...GOING, avatar: 'custom', src: HOST + 'avatars/a.jpg' }));
+test('accepts a custom avatar path inside avatars/, and builds the URL itself', async () => {
+  store.clear();
+  const res = await call(rsvp, post({ ...GOING, avatar: 'custom', avatarPath: 'avatars/a-1.jpg' }));
   assert.equal(res.statusCode, 201);
+  const card = JSON.parse([...store.values()].find((v) => v.pathname.startsWith('guests/')).body);
+  assert.equal(card.src, '/api/avatar?p=avatars%2Fa-1.jpg');
 });
 
 test('parses a stringified JSON body', async () => {
@@ -172,12 +199,6 @@ test('guests returns only public fields, oldest first', async () => {
 /* ── upload ─────────────────────────────────────────────────── */
 
 const PIXEL = 'data:image/jpeg;base64,' + Buffer.from('fake-jpeg-bytes').toString('base64');
-
-test('upload stores an image and returns its url', async () => {
-  const res = await call(upload, post({ dataUrl: PIXEL }));
-  assert.equal(res.statusCode, 201);
-  assert.match(res.body.url, /^https:\/\/.*\.public\.blob\.vercel-storage\.com\/avatars\//);
-});
 
 test('upload rejects a non-image data url', async () => {
   const bad = 'data:text/html;base64,' + Buffer.from('<script>').toString('base64');
@@ -304,5 +325,42 @@ test('diag surfaces the real error when the store rejects a write', async () => 
   assert.equal(res.body.ok, false);
   const write = res.body.steps.find((s) => s.step === 'write');
   assert.match(write.error, /public access is not allowed/);
-  assert.match(res.body.hint, /read-write token/);
+  assert.match(res.body.hint, /BLOB_READ_WRITE_TOKEN|VERCEL_OIDC_TOKEN/);
+});
+
+
+/* ── avatar proxy ───────────────────────────────────────────── */
+
+test('upload returns a path and a proxy url, and stores privately', async () => {
+  store.clear();
+  const res = await call(upload, post({ dataUrl: PIXEL }));
+  assert.equal(res.statusCode, 201);
+  assert.match(res.body.path, /^avatars\//);
+  assert.equal(res.body.url, `/api/avatar?p=${encodeURIComponent(res.body.path)}`);
+  assert.ok(!res.body.url.startsWith('http'), 'must not hand out a raw blob URL');
+});
+
+test('the avatar proxy streams a stored image back', async () => {
+  store.clear();
+  const up = await call(upload, post({ dataUrl: PIXEL }));
+  const res = await call(avatar, get({ p: up.body.path }));
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.headers['Content-Type'], 'image/jpeg');
+  assert.match(res.headers['Cache-Control'], /immutable/);
+  assert.equal(res.payload.toString(), 'fake-jpeg-bytes');
+});
+
+test('the avatar proxy refuses to serve anything outside avatars/', async () => {
+  store.clear();
+  await call(rsvp, post({ ...GOING, name: 'private person', phone: '555' }));
+  const record = [...store.values()].find((v) => v.pathname.startsWith('rsvps/'));
+  for (const bad of [record.pathname, 'rsvps/', '../rsvps/x.json', 'avatars/../rsvps/x.json', '']) {
+    const res = await call(avatar, get({ p: bad }));
+    assert.equal(res.statusCode, 400, `should refuse ${JSON.stringify(bad)}`);
+  }
+});
+
+test('the avatar proxy 404s a path that does not exist', async () => {
+  const res = await call(avatar, get({ p: 'avatars/nope.jpg' }));
+  assert.equal(res.statusCode, 404);
 });

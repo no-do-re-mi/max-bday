@@ -326,6 +326,8 @@
     }
   }
 
+  // Returns { path, url }: the path is what the server validates and stores,
+  // the url is what the browser renders.
   async function uploadCustomAvatar() {
     const res = await fetch('api/upload', {
       method: 'POST',
@@ -333,9 +335,9 @@
       body: JSON.stringify({ dataUrl: state.customDataUrl })
     });
     if (!res.ok) throw new Error('upload failed');
-    const { url } = await res.json();
-    if (!url) throw new Error('upload failed');
-    return url;
+    const { path, url } = await res.json();
+    if (!path || !url) throw new Error('upload failed');
+    return { path, url };
   }
 
   /* ── submit ───────────────────────────────────────────────── */
@@ -350,11 +352,16 @@
     setError('');
 
     let src = null;
+    let avatarPath = null;
     let delivered = true;
     let id = null;
 
     try {
-      if (going && state.avatar === 'custom') src = await uploadCustomAvatar();
+      if (going && state.avatar === 'custom') {
+        const uploaded = await uploadCustomAvatar();
+        avatarPath = uploaded.path;
+        src = uploaded.url;
+      }
 
       const res = await fetch('api/rsvp', {
         method: 'POST',
@@ -366,7 +373,7 @@
           why:   going ? '' : el.why.value.trim(),
           plusOne: going ? state.plusOne === true : false,
           avatar: going ? state.avatar : null,
-          src
+          avatarPath
         })
       });
       if (!res.ok) throw new Error('rsvp ' + res.status);
