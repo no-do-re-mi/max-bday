@@ -7,8 +7,8 @@ photographic cutouts drifting in zero gravity behind it all.
 
 **september 12 / 15 sheridan square / 8pm**
 
-Built from `design_handoff_max_birthday` — plain HTML/CSS/JS with Vercel
-functions for the RSVPs. No build step, no framework.
+Built from the `design_handoff_max_birthday` spec — plain HTML/CSS/JS with
+Vercel functions for the RSVPs. No build step, no framework.
 
 ```
 index.html          hero + guest list + modal (all three views, toggled in JS)
@@ -22,22 +22,16 @@ test/               API tests — `npm test`
 
 ## Deploying
 
-The site lives in a subdirectory of a repo whose `main` branch is a different
-site, so Vercel needs pointing at both the right branch and the right folder.
-
-0. **Get the code onto `main` first.** Vercel treats the repo's default branch
-   as production, and `main` doesn't have `max-birthday/` on it — deploying
-   before merging gets you a 404. Merge `claude/max-birthday-website-vercel-7bvrd2`
-   into `main`, or change Production Branch under Settings → Git after importing.
-1. **Import the repo** at [vercel.com/new](https://vercel.com/new), picking this
-   branch.
-2. Set **Root Directory** to `max-birthday`. Leave Framework Preset on "Other" —
-   there's nothing to build.
-3. Deploy. The site will be live, but every RSVP will fail quietly (see below)
-   until step 4.
-4. **Add storage:** project → **Storage** → **Create Database** → **Blob**, and
+1. **Import the repo** at [vercel.com/new](https://vercel.com/new). Leave
+   Framework Preset on "Other" and Root Directory as `./` — there's nothing to
+   build and nothing to point at.
+2. **Deploy.** The site will be live, but every RSVP will fail quietly (see
+   below) until step 4.
+3. **Add storage:** project → **Storage** → **Create Database** → **Blob**, and
    connect it to the project. That sets `BLOB_READ_WRITE_TOKEN` automatically.
-5. **Redeploy** so the function picks up the token.
+4. **Set `ADMIN_KEY`** under Settings → Environment Variables, to any secret
+   string you make up.
+5. **Redeploy.** Steps 3 and 4 only take effect on a new deployment.
 
 ### The domain
 
@@ -55,11 +49,12 @@ The domain is hardcoded in five places in the `<head>` of `index.html` — the
 canonical link, `og:url`, `og:site_name`, and the two preview-image tags. If it
 ever changes, `grep itsmaxsbirthday.com index.html` finds all of them.
 
-To see the RSVPs, set an `ADMIN_KEY` environment variable to any secret string,
-redeploy, and open `/api/admin?key=YOUR_KEY`. That returns every RSVP with phone
-numbers, plus-ones, a headcount, and everyone's excuses. It's the only endpoint
-that exposes phone numbers, and it's the only one behind a key — keep the key to
-yourself.
+### Reading the RSVPs
+
+Open `/api/admin?key=YOUR_ADMIN_KEY`. That returns every RSVP with phone numbers,
+plus-ones, a headcount, and everyone's excuses. It's the only endpoint that
+exposes phone numbers, and the only one behind a key — so keep the key to
+yourself, and don't paste that URL anywhere shared.
 
 ### Before it goes out
 
