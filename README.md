@@ -75,6 +75,7 @@ yourself, and don't paste that URL anywhere shared.
 | `/api/rsvp` | POST | Records an RSVP. |
 | `/api/upload` | POST | Stores a guest's own profile photo, returns its URL. |
 | `/api/admin` | GET | Every record, with phone numbers and excuses. Needs `ADMIN_KEY`. |
+| `/api/diag` | GET | Writes, reads back, lists and deletes a test blob, and reports which credential env vars are present. Needs `ADMIN_KEY`. Start here when storage misbehaves. |
 
 Each RSVP is written as **two** blobs: a public card under `guests/` (name,
 avatar, `+1`) and the full record under `rsvps/` (phone number, excuse).
@@ -86,6 +87,19 @@ Profile photos are cropped and downscaled to a 256px square in the browser
 before upload, so a 4MB camera roll photo arrives as a few KB. The server only
 accepts JPEG/PNG/WebP under 600KB, and `/api/rsvp` only accepts an avatar URL on
 our own blob host.
+
+### Credentials
+
+The SDK accepts **either** a read-write token **or** OIDC. Connecting a Blob
+store in the Vercel dashboard creates `BLOB_STORE_ID` and
+`BLOB_WEBHOOK_PUBLIC_KEY`, but only adds `BLOB_READ_WRITE_TOKEN` if you tick
+*"Add a read-write token env var to this connection"*. Either path works; the
+token is the more reliable one, since `VERCEL_OIDC_TOKEN` is only injected when
+the project has OIDC enabled.
+
+`/api/diag?key=YOUR_ADMIN_KEY` reports which of the three are present (as
+booleans, never values) and attempts a real write/read/delete, surfacing the
+SDK's own error. Check it before assuming the code is wrong.
 
 ### If storage isn't set up
 

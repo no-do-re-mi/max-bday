@@ -7,7 +7,11 @@ const store = new Map(); // url -> { pathname, body, contentType }
 const HOST = 'https://fake123.public.blob.vercel-storage.com/';
 let putCalls = 0;
 
+// swappable so a test can make the store reject a write
+const fakePutRef = { fn: null };
+
 function fakePut(pathname, body, opts = {}) {
+  if (fakePutRef.fn) return fakePutRef.fn(pathname, body, opts);
   putCalls++;
   const suffix = opts.addRandomSuffix ? '-' + Math.random().toString(36).slice(2, 8) : '';
   const dot = pathname.lastIndexOf('.');
@@ -25,7 +29,9 @@ function fakeList({ prefix = '' } = {}) {
   });
 }
 
-mock.module('@vercel/blob', { namedExports: { put: fakePut, list: fakeList } });
+function fakeDel(url) { store.delete(url); return Promise.resolve(); }
+
+mock.module('@vercel/blob', { namedExports: { put: fakePut, list: fakeList, del: fakeDel } });
 
 const realFetch = globalThis.fetch;
 globalThis.fetch = (input, init) => {
@@ -45,6 +51,8 @@ const rsvp   = (await import('../api/rsvp.js')).default;
 const guests = (await import('../api/guests.js')).default;
 const upload = (await import('../api/upload.js')).default;
 const admin  = (await import('../api/admin.js')).default;
+const diag   = (await import('../api/diag.js')).default;
+const { configured } = await import('../api/_store.js');
 
 function mockRes() {
   const res = {
@@ -223,4 +231,78 @@ test('without a blob token, guests is empty and rsvp reports not_configured', as
   assert.equal((await call(rsvp, post(GOING))).statusCode, 503);
   assert.equal((await call(upload, post({ dataUrl: PIXEL }))).statusCode, 503);
   process.env.BLOB_READ_WRITE_TOKEN = 'test-token';
+});
+
+
+/* ── credential detection ───────────────────────────────────── */
+
+function withEnv(env, fn) {
+  const saved = {};
+  const keys = ['BLOB_READ_WRITE_TOKEN', 'BLOB_STORE_ID', 'VERCEL_OIDC_TOKEN'];
+  for (const k of keys) { saved[k] = process.env[k]; delete process.env[k]; }
+  Object.assign(process.env, env);
+  try { return fn(); }
+  finally {
+    for (const k of keys) { delete process.env[k]; if (saved[k] !== undefined) process.env[k] = saved[k]; }
+  }
+}
+
+test('a read-write token counts as configured', () => {
+  assert.equal(withEnv({ BLOB_READ_WRITE_TOKEN: 'tok' }, configured), true);
+});
+
+// The bug this fixes: connecting a store without ticking "add a read-write
+// token" leaves only OIDC, which the SDK accepts but configured() rejected.
+test('OIDC credentials count as configured', () => {
+  assert.equal(withEnv({ BLOB_STORE_ID: 'store_abc', VERCEL_OIDC_TOKEN: 'jwt' }, configured), true);
+});
+
+test('a store id with no OIDC token is not configured', () => {
+  assert.equal(withEnv({ BLOB_STORE_ID: 'store_abc' }, configured), false);
+});
+
+test('no credentials at all is not configured', () => {
+  assert.equal(withEnv({}, configured), false);
+});
+
+/* ── diagnostics ────────────────────────────────────────────── */
+
+test('diag refuses without the admin key', async () => {
+  const saved = process.env.ADMIN_KEY;
+  delete process.env.ADMIN_KEY;
+  assert.equal((await call(diag, get({ key: 'anything' }))).statusCode, 503);
+  process.env.ADMIN_KEY = saved;
+  assert.equal((await call(diag, get({ key: 'nope' }))).statusCode, 401);
+  assert.equal((await call(diag, get())).statusCode, 401);
+});
+
+test('diag round-trips a blob and cleans up after itself', async () => {
+  store.clear();
+  const res = await call(diag, get({ key: 'let-me-in' }));
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.body.ok, true);
+  assert.deepEqual(res.body.steps.map((s) => s.step), ['write', 'read back', 'list', 'clean up']);
+  assert.ok(res.body.steps.every((s) => s.ok), 'every step should pass');
+  assert.equal(store.size, 0, 'the diagnostic blob should be deleted again');
+});
+
+test('diag reports which credentials are present, never their values', async () => {
+  const res = await call(diag, get({ key: 'let-me-in' }));
+  assert.deepEqual(Object.keys(res.body.credentials).sort(),
+    ['BLOB_READ_WRITE_TOKEN', 'BLOB_STORE_ID', 'VERCEL_OIDC_TOKEN']);
+  for (const v of Object.values(res.body.credentials)) assert.equal(typeof v, 'boolean');
+  assert.ok(!JSON.stringify(res.body).includes('test-token'), 'must not leak the token value');
+});
+
+test('diag surfaces the real error when the store rejects a write', async () => {
+  fakePutRef.fn = () => Promise.reject(
+    new Error('Vercel Blob: public access is not allowed on this store')
+  );
+  const res = await call(diag, get({ key: 'let-me-in' }));
+  fakePutRef.fn = null;
+  assert.equal(res.statusCode, 500);
+  assert.equal(res.body.ok, false);
+  const write = res.body.steps.find((s) => s.step === 'write');
+  assert.match(write.error, /public access is not allowed/);
+  assert.match(res.body.hint, /read-write token/);
 });
