@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>celebrating max's birthday</title>
+<meta name="description" content="september 12 / 15 sheridan square / 8pm. the thirty second annual edition of celebrating max's birthday.">
+<meta name="theme-color" content="#000000">
+
+<!-- Link previews: these paths work as-is on the deployed domain. If a scraper
+     ever refuses to resolve them, swap in the absolute URL, e.g.
+     https://your-domain.vercel.app/assets/og.png -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="celebrating max's birthday">
+<meta property="og:description" content="september 12 / 15 sheridan square / 8pm">
+<meta property="og:image" content="/assets/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="celebrating max's birthday">
+<meta name="twitter:description" content="september 12 / 15 sheridan square / 8pm">
+<meta name="twitter:image" content="/assets/og.png">
+
+<link rel="icon" href="/assets/hotdog.png">
+<link rel="preload" href="fonts/orbitron-800.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/space-mono-400.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/space-mono-700.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- floating cutouts: fixed layer behind everything -->
+<div class="floaters" aria-hidden="true">
+  <img class="f f1" src="assets/venus.png" alt="">
+  <img class="f f2" src="assets/venus.png" alt="">
+  <img class="f f3" src="assets/elbow.png" alt="">
+  <img class="f f4" src="assets/elbow.png" alt="">
+  <img class="f f5" src="assets/hotdog.png" alt="">
+  <img class="f f6" src="assets/hotdog.png" alt="">
+  <img class="f f7" src="assets/elbow.png" alt="">
+  <img class="f f8" src="assets/venus.png" alt="">
+</div>
+
+<main class="stage">
+
+  <!-- ── view: hero ─────────────────────────────────────────── -->
+  <section class="hero" id="view-home">
+    <p class="eyebrow">the thirty second annual edition of</p>
+    <h1 class="headline">celebrating max&rsquo;s birthday</h1>
+    <p class="details">
+      <span>september 12</span>
+      <span class="sep" aria-hidden="true">/</span>
+      <span>15 sheridan square</span>
+      <span class="sep" aria-hidden="true">/</span>
+      <span>8pm</span>
+    </p>
+    <button type="button" class="btn-rsvp" id="open-rsvp">rsvp</button>
+  </section>
+
+  <!-- ── view: who's coming ─────────────────────────────────── -->
+  <section class="guests" id="view-guests" hidden>
+    <p class="kicker">september 12 / 15 sheridan square / 8pm</p>
+    <h1 class="guests-title">who&rsquo;s coming</h1>
+    <p class="count" id="guest-count">0 in orbit</p>
+
+    <div class="guest-grid" id="guest-grid"></div>
+
+    <div class="faq">
+      <button type="button" class="faq-trigger" id="faq-trigger" aria-expanded="false" aria-controls="faq-body">
+        <span>faq</span>
+        <span class="faq-plus" aria-hidden="true">+</span>
+      </button>
+      <p class="faq-body" id="faq-body" hidden>no questions allowed. unless you really need to ask. then text noemie.</p>
+    </div>
+
+    <button type="button" class="btn-ghost btn-back" id="go-home">back</button>
+  </section>
+
+</main>
+
+<!-- ── rsvp modal ───────────────────────────────────────────── -->
+<div class="scrim" id="scrim" hidden>
+  <div class="panel" role="dialog" aria-modal="true" aria-labelledby="modal-title" id="panel">
+    <button type="button" class="panel-close" id="modal-close" aria-label="close">&times;</button>
+
+    <!-- step 1 -->
+    <div class="step" id="step-1">
+      <p class="kicker">september 12 / 8pm</p>
+      <h2 class="question" id="modal-title">are you coming?</h2>
+      <div class="choice-row">
+        <button type="button" class="pill pill-filled" id="pick-going">going</button>
+        <button type="button" class="pill pill-outline" id="pick-not-going">not going</button>
+      </div>
+    </div>
+
+    <!-- step 2 -->
+    <form class="step" id="step-2" hidden novalidate>
+      <p class="kicker" id="going-label">going</p>
+
+      <div class="field">
+        <label for="rsvp-name">name</label>
+        <input id="rsvp-name" name="name" type="text" placeholder="your name" autocomplete="name" maxlength="60" required>
+      </div>
+
+      <div class="field" id="field-why" hidden>
+        <label for="rsvp-why">tell me why</label>
+        <textarea id="rsvp-why" name="why" rows="3" placeholder="your excuse" maxlength="400"></textarea>
+      </div>
+
+      <div class="field going-only">
+        <label for="rsvp-phone">mobile number</label>
+        <input id="rsvp-phone" name="phone" type="tel" placeholder="(000) 000-0000" autocomplete="tel" maxlength="24">
+      </div>
+
+      <fieldset class="field going-only">
+        <legend>bringing a plus one?</legend>
+        <div class="toggle-row" role="group">
+          <button type="button" class="tog" data-plus="yes" aria-pressed="false">yes</button>
+          <button type="button" class="tog" data-plus="no" aria-pressed="false">no</button>
+        </div>
+      </fieldset>
+
+      <fieldset class="field going-only">
+        <legend>pick your profile pic</legend>
+        <div class="avatar-row">
+          <button type="button" class="tile" data-avatar="elbow" aria-pressed="false" aria-label="elbow">
+            <img src="assets/elbow.png" alt="">
+          </button>
+          <button type="button" class="tile" data-avatar="venus" aria-pressed="false" aria-label="venus">
+            <img class="round" src="assets/venus.png" alt="">
+          </button>
+          <button type="button" class="tile" data-avatar="hotdog" aria-pressed="false" aria-label="hot dog">
+            <img src="assets/hotdog.png" alt="">
+          </button>
+          <label class="tile tile-upload" id="tile-custom">
+            <span class="plus" id="custom-plus">+</span>
+            <img class="round" id="custom-preview" alt="your photo" hidden>
+            <input type="file" id="custom-file" accept="image/*">
+          </label>
+        </div>
+      </fieldset>
+
+      <p class="form-error" id="form-error" role="alert" hidden></p>
+
+      <button type="submit" class="pill pill-filled btn-send" id="send-it" disabled>send it</button>
+    </form>
+
+    <!-- step 3 -->
+    <div class="step step-decline" id="step-3" hidden>
+      <div class="heart" aria-hidden="true">&#128148;</div>
+      <p class="missed">you&rsquo;ll be missed</p>
+      <button type="button" class="btn-ghost" id="decline-close">close</button>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

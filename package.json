@@ -1,0 +1,13 @@
+{
+  "name": "max-birthday",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Invite site for max's birthday \u2014 september 12, 15 sheridan square, 8pm.",
+  "type": "module",
+  "dependencies": {
+    "@vercel/blob": "^2.8.0"
+  },
+  "scripts": {
+    "test": "node --experimental-test-module-mocks --test \"test/**/*.test.mjs\""
+  }
+}
