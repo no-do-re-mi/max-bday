@@ -99,6 +99,7 @@ you've tested one RSVP end to end.
 There's no build. Open `index.html`, or serve the folder:
 
 ```sh
+npm install          # only needed for the tests and `vercel dev`
 npx serve .          # static only — /api/* will 404 and the fallback kicks in
 vercel dev           # the real thing, functions included
 npm test             # API tests (validation, privacy split, admin auth)
