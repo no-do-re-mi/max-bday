@@ -1,4 +1,4 @@
-import { put, list, get } from '@vercel/blob';
+import { put, list, get, del } from '@vercel/blob';
 
 // Two prefixes, deliberately: the public guest card (name, avatar, +1) and
 // the full record (phone, excuse). /api/guests only ever reads PUBLIC, so a
@@ -62,6 +62,45 @@ export function isSafeAvatarPath(value) {
     && value.startsWith(AVATAR_PREFIX)
     && !value.includes('..')
     && /^[A-Za-z0-9/_.-]+$/.test(value);
+}
+
+// Pull the stored pathname back out of an avatar URL we issued.
+export function avatarPathFromSrc(src) {
+  if (typeof src !== 'string' || !src.startsWith('/api/avatar?')) return null;
+  const raw = new URLSearchParams(src.slice(src.indexOf('?') + 1)).get('p');
+  return raw && isSafeAvatarPath(raw) ? raw : null;
+}
+
+export const isSafeId = (id) => typeof id === 'string' && /^[A-Za-z0-9-]{1,60}$/.test(id);
+
+// Removes an RSVP completely: the guest card, the full record, and the guest's
+// uploaded photo if they had one. Used to clear out duplicates.
+export async function deleteRsvp(id) {
+  if (!isSafeId(id)) throw new Error('bad_id');
+
+  const doomed = [];
+  const avatars = new Set();
+
+  for (const prefix of [PRIVATE_PREFIX, PUBLIC_PREFIX]) {
+    const { blobs } = await list({ prefix: `${prefix}${id}` });
+    for (const blob of blobs) {
+      // list() matches on prefix, so an id that is a prefix of another id
+      // would sweep up its neighbour. Only the random suffix may follow.
+      if (!blob.pathname.startsWith(`${prefix}${id}-`)) continue;
+      try {
+        const avatar = avatarPathFromSrc((await readJson(blob.pathname)).src);
+        if (avatar) avatars.add(avatar);
+      } catch {
+        // An unreadable record still gets removed.
+      }
+      doomed.push(blob.pathname);
+    }
+  }
+
+  if (!doomed.length) return { removed: [], found: false };
+
+  await del([...doomed, ...avatars]);
+  return { removed: doomed, avatars: [...avatars], found: true };
 }
 
 export function fail(res, status, error) {

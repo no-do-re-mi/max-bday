@@ -63,6 +63,12 @@ h2 { margin:44px 0 16px; font-size:12px; letter-spacing:.3em; text-transform:upp
 .tel:hover { border-color:var(--primary); }
 .plus { flex:none; font-size:10px; letter-spacing:.2em; padding:5px 9px; border-radius:999px;
         border:1px solid var(--rule); color:var(--body); }
+.rm { flex:none; padding:7px 13px; border-radius:999px; border:1px solid var(--hairline);
+      background:transparent; color:var(--label); font-size:10px; letter-spacing:.2em;
+      text-transform:uppercase; cursor:pointer; transition:color 180ms ease, border-color 180ms ease; }
+.rm:hover { color:var(--primary); border-color:var(--rule); }
+.rm[data-armed="1"] { color:#e0a09a; border-color:#e0a09a; }
+.rm:disabled { opacity:.5; cursor:progress; }
 .excuse { font-size:13px; line-height:1.6; color:var(--body); letter-spacing:.03em; }
 .empty { font-size:12px; letter-spacing:.2em; text-transform:uppercase; color:var(--label); }
 .err { margin-top:16px; font-size:13px; line-height:1.6; color:#e0a09a; }
@@ -97,6 +103,8 @@ h2 { margin:44px 0 16px; font-size:12px; letter-spacing:.3em; text-transform:upp
       <button class="btn btn-ghost" id="forget" type="button">forget key</button>
     </div>
 
+    <p class="err" id="panel-err" hidden></p>
+
     <h2>coming</h2>
     <div class="rows" id="going"></div>
 
@@ -119,6 +127,7 @@ h2 { margin:44px 0 16px; font-size:12px; letter-spacing:.3em; text-transform:upp
   let data = null;
 
   const showErr = (m) => { $('err').textContent = m; $('err').hidden = !m; };
+  const showPanelErr = (m) => { $('panel-err').textContent = m; $('panel-err').hidden = !m; };
 
   async function load(key) {
     const res = await fetch('api/admin', { headers: { 'x-admin-key': key }, cache: 'no-store' });
@@ -180,7 +189,50 @@ h2 { margin:44px 0 16px; font-size:12px; letter-spacing:.3em; text-transform:upp
       p.textContent = '+1';
       row.append(p);
     }
+
+    if (r.id) row.append(removeButton(r));
     return row;
+  }
+
+  // Two taps rather than a browser dialog: friendlier on a phone, and still
+  // impossible to delete someone with one stray tap.
+  function removeButton(r) {
+    const btn = document.createElement('button');
+    btn.className = 'rm';
+    btn.type = 'button';
+    btn.textContent = 'remove';
+    btn.setAttribute('aria-label', `remove ${r.name}`);
+    let timer = null;
+
+    btn.addEventListener('click', async () => {
+      if (btn.dataset.armed !== '1') {
+        btn.dataset.armed = '1';
+        btn.textContent = 'sure?';
+        timer = setTimeout(() => {
+          btn.dataset.armed = '0';
+          btn.textContent = 'remove';
+        }, 4000);
+        return;
+      }
+      clearTimeout(timer);
+      btn.disabled = true;
+      btn.textContent = 'removing…';
+      try {
+        const key = localStorage.getItem(KEY_STORE);
+        const res = await fetch('api/admin?id=' + encodeURIComponent(r.id), {
+          method: 'DELETE',
+          headers: { 'x-admin-key': key }
+        });
+        if (!res.ok) throw new Error('remove failed (' + res.status + ')');
+        render(await load(key));
+      } catch (e) {
+        btn.disabled = false;
+        btn.dataset.armed = '0';
+        btn.textContent = 'remove';
+        showPanelErr(e.message);
+      }
+    });
+    return btn;
   }
 
   function render(d) {
@@ -204,6 +256,7 @@ h2 { margin:44px 0 16px; font-size:12px; letter-spacing:.3em; text-transform:upp
       }
       for (const r of list) box.append(card(r, declining));
     }
+    showPanelErr('');
     $('gate').hidden = true;
     $('panel').hidden = false;
   }

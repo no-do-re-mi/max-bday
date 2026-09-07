@@ -217,7 +217,8 @@ fieldset { margin: 0; padding: 0; border: 0; }
   padding-right: clamp(30px, 4.4vw, 78px);
 }
 
-/* Escape hatch: two people sharing one phone both need to be able to RSVP. */
+/* Quiet secondary actions under the main button: "not you?" for a shared
+   phone, "already rsvp'd?" for someone arriving on a second device. */
 .rsvp-again { margin: 18px 0 0; }
 .rsvp-again button {
   padding: 6px 4px;

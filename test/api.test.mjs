@@ -34,7 +34,13 @@ function fakeList({ prefix = '' } = {}) {
   });
 }
 
-function fakeDel(url) { store.delete(url); return Promise.resolve(); }
+function fakeDel(target) {
+  for (const one of Array.isArray(target) ? target : [target]) {
+    if (store.has(one)) { store.delete(one); continue; }
+    for (const [url, v] of store) if (v.pathname === one) store.delete(url);
+  }
+  return Promise.resolve();
+}
 
 // Private-store semantics: content is reachable only through get(), by
 // pathname, with credentials — never by fetching the URL.
@@ -86,6 +92,8 @@ function mockRes() {
 }
 const call = async (handler, req) => { const res = mockRes(); await handler(req, res); return res; };
 const post = (body) => ({ method: 'POST', body, headers: {}, query: {} });
+const putJsonRaw = (pathname, value) =>
+  fakePut(pathname, JSON.stringify(value), { access: 'private', addRandomSuffix: false });
 const get  = (query = {}, headers = {}) => ({ method: 'GET', headers, query });
 
 const GOING = { going: true, name: 'Noemie', phone: '(212) 555-0142', plusOne: true, avatar: 'hotdog' };
@@ -363,4 +371,67 @@ test('the avatar proxy refuses to serve anything outside avatars/', async () => 
 test('the avatar proxy 404s a path that does not exist', async () => {
   const res = await call(avatar, get({ p: 'avatars/nope.jpg' }));
   assert.equal(res.statusCode, 404);
+});
+
+
+/* ── deleting an rsvp ───────────────────────────────────────── */
+
+const del_ = (query) => ({ method: 'DELETE', headers: {}, query });
+const idOf = (name) => {
+  const hit = [...store.values()].find(
+    (v) => v.pathname.startsWith('rsvps/') && JSON.parse(v.body).name === name);
+  return JSON.parse(hit.body).id;
+};
+
+test('deleting an rsvp removes both its records', async () => {
+  store.clear();
+  await call(rsvp, post({ ...GOING, name: 'duplicate dave' }));
+  await call(rsvp, post({ ...GOING, name: 'keep me' }));
+  assert.equal(store.size, 4, 'two RSVPs, two blobs each');
+
+  const res = await call(admin, { ...del_({ id: idOf('duplicate dave') }), headers: { 'x-admin-key': 'let-me-in' } });
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.body.removed, 2);
+
+  const left = [...store.values()].map((v) => JSON.parse(v.body).name);
+  assert.deepEqual([...new Set(left)], ['keep me']);
+});
+
+test('deleting also removes the guest\'s uploaded photo', async () => {
+  store.clear();
+  const up = await call(upload, post({ dataUrl: PIXEL }));
+  await call(rsvp, post({ ...GOING, avatar: 'custom', avatarPath: up.body.path }));
+  assert.ok([...store.values()].some((v) => v.pathname === up.body.path), 'photo stored');
+
+  await call(admin, { ...del_({ id: idOf(GOING.name.toLowerCase()) }), headers: { 'x-admin-key': 'let-me-in' } });
+  assert.equal(store.size, 0, 'card, record and photo all gone');
+});
+
+// list() matches on prefix, so a shorter id must not sweep up a longer one.
+test('deleting one id leaves an id that merely starts with it alone', async () => {
+  store.clear();
+  await call(rsvp, post({ ...GOING, name: 'short' }));
+  const shortId = idOf('short');
+
+  // forge a neighbour whose id begins with the same characters
+  await putJsonRaw(`guests/${shortId}extra-zz.json`, { id: shortId + 'extra', name: 'neighbour' });
+  await putJsonRaw(`rsvps/${shortId}extra-zz.json`, { id: shortId + 'extra', name: 'neighbour', going: true });
+
+  const res = await call(admin, { ...del_({ id: shortId }), headers: { 'x-admin-key': 'let-me-in' } });
+  assert.equal(res.body.removed, 2, 'only the two blobs for the exact id');
+  const left = [...store.values()].map((v) => JSON.parse(v.body).name);
+  assert.deepEqual([...new Set(left)], ['neighbour']);
+});
+
+test('delete refuses a bad id, a missing id, and a wrong key', async () => {
+  assert.equal((await call(admin, { ...del_({ id: '../rsvps/x' }), headers: { 'x-admin-key': 'let-me-in' } })).statusCode, 400);
+  assert.equal((await call(admin, { ...del_({}), headers: { 'x-admin-key': 'let-me-in' } })).statusCode, 400);
+  assert.equal((await call(admin, { ...del_({ id: 'nope-nope' }), headers: { 'x-admin-key': 'let-me-in' } })).statusCode, 404);
+  assert.equal((await call(admin, del_({ id: 'whatever' }))).statusCode, 401);
+});
+
+test('admin rejects methods other than GET and DELETE', async () => {
+  const res = await call(admin, { method: 'POST', headers: { 'x-admin-key': 'let-me-in' }, query: {} });
+  assert.equal(res.statusCode, 405);
+  assert.equal(res.headers.Allow, 'GET, DELETE');
 });

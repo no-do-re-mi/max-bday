@@ -20,6 +20,7 @@
     guestCount:  $('guest-count'),
     openRsvp:    $('open-rsvp'),
     rsvpAgain:   $('rsvp-again'),
+    already:     $('already-rsvped'),
     faqTrigger:  $('faq-trigger'),
     faqBody:     $('faq-body'),
     scrim:       $('scrim'),
@@ -104,6 +105,9 @@
     el.openRsvp.textContent = done ? 'see who\u2019s coming' : 'rsvp';
     el.openRsvp.dataset.mode = done ? 'guests' : 'rsvp';
     el.rsvpAgain.hidden = !done;
+    // The flag only lives in this browser, so someone who RSVP'd on their
+    // phone lands here as a stranger. Let them say so rather than RSVP twice.
+    el.already.hidden = done;
   }
 
   async function loadGuests(fresh = false) {
@@ -410,6 +414,12 @@
     else openModal();
   });
   $('rsvp-again-btn').addEventListener('click', openModal);
+
+  $('already-btn').addEventListener('click', () => {
+    rememberRsvped(null);
+    applyRsvpedState();
+    showView('guests');
+  });
   $('modal-close').addEventListener('click', closeModal);
   $('decline-close').addEventListener('click', closeModal);
   $('go-home').addEventListener('click', () => showView('home'));

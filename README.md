@@ -55,7 +55,9 @@ ever changes, `grep itsmaxsbirthday.com index.html` finds all of them.
 Go to **`/admin`** and enter your `ADMIN_KEY`. It lists everyone coming with
 tappable phone numbers, plus-ones and avatars, everyone who declined with their
 excuse, and a headcount that counts plus-ones. It can copy all the numbers to
-the clipboard for a group text, or download the lot as CSV. The key is
+the clipboard for a group text, or download the lot as CSV. Each row has a
+**remove** button for clearing out duplicates — two taps, and it deletes the
+guest card, the full record and their uploaded photo together. The key is
 remembered in that browser until you hit "forget key", and travels in a header
 rather than the URL so it stays out of browser history and referrers.
 
@@ -84,6 +86,7 @@ with the key reads every phone number. Keep it to yourself.
 | `/api/upload` | POST | Stores a guest's own profile photo privately, returns its path. |
 | `/api/avatar` | GET | Streams a stored photo back to the browser. `avatars/` only. |
 | `/api/admin` | GET | Every record, with phone numbers and excuses. Needs `ADMIN_KEY`. |
+| `/api/admin?id=…` | DELETE | Removes one RSVP — card, record and photo. Needs `ADMIN_KEY`. |
 | `/api/diag` | GET | Writes, reads back, lists and deletes a test blob, and reports which credential env vars are present. Needs `ADMIN_KEY`. Start here when storage misbehaves. |
 
 Each RSVP is written as **two** blobs: a card under `guests/` (name, avatar,
@@ -141,6 +144,10 @@ npm test             # API tests (validation, privacy split, admin auth)
 
 Worth knowing before changing anything — each of these was a deliberate call:
 
+- **"Already rsvp'd?"** sits under the RSVP button. Whether someone has RSVP'd
+  is only known to the browser they did it in, so anyone arriving on a second
+  device looks like a stranger; the link lets them say otherwise and go
+  straight to the guest list rather than RSVP a second time.
 - **The headline never wraps.** It scales with the viewport and stays one line
   at every width. Below 375px the design's 19px floor is wider than the screen,
   so there's a media query that scales it down instead of letting it clip.
