@@ -24,7 +24,11 @@
   "rewrites": [
     {
       "source": "/activity",
-      "destination": "/index.html"
+      "destination": "/"
+    },
+    {
+      "source": "/activity/",
+      "destination": "/"
     }
   ]
 }
