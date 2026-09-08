@@ -8,6 +8,7 @@
     "@vercel/blob": "^2.8.0"
   },
   "scripts": {
-    "test": "node --experimental-test-module-mocks --test \"test/**/*.test.mjs\""
+    "test": "node --experimental-test-module-mocks --test \"test/**/*.test.mjs\"",
+    "build:activity": "node scripts/build-activity.mjs"
   }
 }

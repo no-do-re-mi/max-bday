@@ -18,6 +18,8 @@ fonts/              Orbitron 800 + Space Mono 400/700, self-hosted
 assets/             the three cutouts, plus the link-preview card
 api/                serverless functions (see below)
 admin.html          the host's RSVP list (see below)
+activity.html       GENERATED from index.html — do not edit by hand
+scripts/            the activity.html generator
 test/               API tests — `npm test`
 ```
 
@@ -143,9 +145,16 @@ npm test             # API tests (validation, privacy split, admin auth)
 
 ## The structured activity
 
-`/activity` is the homepage with the activity modal over it — a Vercel rewrite,
-not a second page, so the "dimmed restatement of the homepage" the handoff asks
-for behind the modal is the actual homepage. The modal auto-opens after 600ms;
+`/activity` is the homepage with the activity modal over it, so the "dimmed
+restatement of the homepage" the handoff asks for behind the modal is the actual
+homepage.
+
+It is a real file rather than a rewrite, because a rewrite can only serve the
+homepage's `<meta>` tags and the two pages need different link-preview cards.
+`activity.html` is **generated** from `index.html` by `npm run build:activity`,
+swapping only the block between the `page-identity` markers — so edit
+`index.html` and regenerate, never edit `activity.html` by hand. `npm test`
+fails if the two have drifted. The modal auto-opens after 600ms;
 `close` reveals the hero with a link to reopen it.
 
 It appears in two places:
