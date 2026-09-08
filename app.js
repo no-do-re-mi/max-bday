@@ -496,10 +496,13 @@
     const named = el.actName.value.trim().length > 0;
     el.actSubmit.disabled = !actReady() || el.actSubmit.getAttribute('aria-busy') === 'true';
     if (el.actSubmit.getAttribute('aria-busy') === 'true') return;
+    // The two disabled labels say what's still missing; the ready one has to
+    // read as a button. "i'm in from 7pm" was a statement, and people took it
+    // for a summary of their choice rather than the thing to tap.
     el.actSubmit.textContent =
       activity.picked === null ? 'pick a time'
       : !named ? 'add your name'
-      : `i\u2019m in from ${activity.picked}pm`;
+      : 'confirm';
   }
 
   function openActivity({ name = '', onward = 'home' } = {}) {
