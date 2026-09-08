@@ -563,9 +563,12 @@
     el.actSubmit.removeAttribute('aria-busy');
     activity.done = true;
     const first = name.split(/\s+/)[0].toLowerCase();
+    // No time is echoed back: the exact hour and place get confirmed by text,
+    // so promising "6pm it is" here would be committing to something that
+    // hasn't been settled yet.
     el.actConfirm.textContent = skipped
       ? (first ? `see you at 9, ${first}.` : 'see you at 9.')
-      : (first ? `lovely, ${first}. ${activity.picked}pm it is.` : `${activity.picked}pm it is.`);
+      : (first ? `lovely, ${first}.` : 'lovely.');
     // Where the activity happens isn't public, so joiners get told they'll be
     // texted. Anyone arriving at 9 is coming to the party address as printed.
     el.actSub.textContent = skipped
