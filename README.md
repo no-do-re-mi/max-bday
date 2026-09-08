@@ -19,7 +19,7 @@ assets/             the three cutouts, plus the link-preview card
 api/                serverless functions (see below)
 admin.html          the host's RSVP list (see below)
 activity.html       GENERATED from index.html — do not edit by hand
-scripts/            the activity.html generator
+scripts/            the activity.html generator, and the og card shooter
 test/               API tests — `npm test`
 ```
 
@@ -154,7 +154,13 @@ homepage's `<meta>` tags and the two pages need different link-preview cards.
 `activity.html` is **generated** from `index.html` by `npm run build:activity`,
 swapping only the block between the `page-identity` markers — so edit
 `index.html` and regenerate, never edit `activity.html` by hand. `npm test`
-fails if the two have drifted. The modal auto-opens after 600ms;
+fails if the two have drifted.
+
+Its preview card, `assets/og-activity.png`, is a real screenshot of the modal
+rather than a drawn summary — what people see in the message is the question
+they are being asked. Regenerate it with
+`node scripts/shoot-og-activity.mjs` (against a local server) if the modal's
+copy or layout changes. The modal auto-opens after 600ms;
 `close` reveals the hero with a link to reopen it.
 
 It appears in two places:
