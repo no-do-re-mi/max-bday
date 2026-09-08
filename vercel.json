@@ -20,5 +20,11 @@
       ]
     }
   ],
-  "cleanUrls": true
+  "cleanUrls": true,
+  "rewrites": [
+    {
+      "source": "/activity",
+      "destination": "/index.html"
+    }
+  ]
 }

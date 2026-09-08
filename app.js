@@ -9,6 +9,7 @@
 
   const LOCAL_KEY = 'max-birthday:local-rsvps';
   const RSVPED_KEY = 'max-birthday:rsvped';
+  const NAME_KEY = 'max-birthday:name';
   const AVATAR_PX = 256;
 
   const $ = (id) => document.getElementById(id);
@@ -21,6 +22,16 @@
     openRsvp:    $('open-rsvp'),
     rsvpAgain:   $('rsvp-again'),
     already:     $('already-rsvped'),
+    actScrim:    $('activity-scrim'),
+    actPanel:    $('activity-panel'),
+    actAsk:      $('act-ask'),
+    actDone:     $('act-done'),
+    actName:     $('act-name'),
+    actSubmit:   $('act-submit'),
+    actError:    $('act-error'),
+    actConfirm:  $('act-confirm'),
+    actOnward:   $('act-onward'),
+    actReopen:   $('activity-reopen'),
     faqTrigger:  $('faq-trigger'),
     faqBody:     $('faq-body'),
     scrim:       $('scrim'),
@@ -87,6 +98,14 @@
     } catch {
       return false;
     }
+  }
+
+  function rememberName(name) {
+    try { if (name) localStorage.setItem(NAME_KEY, name); } catch { /* private browsing */ }
+  }
+
+  function knownName() {
+    try { return localStorage.getItem(NAME_KEY) || ''; } catch { return ''; }
   }
 
   function rememberRsvped(going) {
@@ -393,7 +412,7 @@
 
     setBusy(false);
     rememberRsvped(going);
-    applyRsvpedState();
+    rememberName(name);
 
     if (going) {
       const guest = { id, name, avatar: state.avatar, src, plusOne: state.plusOne === true };
@@ -401,7 +420,7 @@
       state.pending = guest;
       renderGuests();
       closeModal();
-      showView('guests');
+      openActivity({ name, onward: 'guests' });
     } else {
       showStep(3);
     }
@@ -461,6 +480,131 @@
     if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
     else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
   });
+
+  /* ── structured activity modal ────────────────────────────── */
+
+  const activity = { picked: null, done: false, onward: 'home', lastFocus: null };
+  const actTimes = Array.from(document.querySelectorAll('.act-time'));
+
+  function actReady() {
+    return activity.picked !== null && el.actName.value.trim().length > 0;
+  }
+
+  // The submit label is the hint: it says what's still missing.
+  function refreshActivity() {
+    const named = el.actName.value.trim().length > 0;
+    el.actSubmit.disabled = !actReady() || el.actSubmit.getAttribute('aria-busy') === 'true';
+    if (el.actSubmit.getAttribute('aria-busy') === 'true') return;
+    el.actSubmit.textContent =
+      activity.picked === null ? 'pick a time'
+      : !named ? 'add your name'
+      : `i\u2019m in from ${activity.picked}pm`;
+  }
+
+  function openActivity({ name = '', onward = 'home' } = {}) {
+    activity.onward = onward;
+    activity.done = false;
+    activity.picked = null;
+    activity.lastFocus = document.activeElement;
+    actTimes.forEach((b) => b.setAttribute('aria-pressed', 'false'));
+    el.actName.value = name || knownName();
+    el.actError.hidden = true;
+    el.actSubmit.removeAttribute('aria-busy');
+    el.actAsk.hidden = false;
+    el.actDone.hidden = true;
+    el.actOnward.textContent = onward === 'guests' ? 'see who\u2019s coming' : 'back to the site';
+    el.actScrim.hidden = false;
+    el.actReopen.hidden = true;
+    document.body.style.overflow = 'hidden';
+    document.body.classList.add('act-open');
+    refreshActivity();
+    // Focus the dialog itself, so the question is announced before the
+    // controls rather than dropping straight onto "5pm".
+    el.actPanel.focus();
+  }
+
+  function closeActivity(goOnward) {
+    el.actScrim.hidden = true;
+    document.body.style.overflow = '';
+    document.body.classList.remove('act-open');
+    // At /activity the hero is the backdrop, so offer a way back in.
+    el.actReopen.hidden = !onActivityRoute();
+    if (goOnward && activity.onward === 'guests') showView('guests');
+    else if (activity.lastFocus instanceof HTMLElement) activity.lastFocus.focus();
+  }
+
+  async function sendActivity(skipped) {
+    const name = el.actName.value.trim();
+    if (!skipped && !actReady()) return;
+    if (!name) { el.actName.focus(); return; }
+
+    el.actSubmit.setAttribute('aria-busy', 'true');
+    el.actSubmit.textContent = 'sending\u2026';
+    el.actSubmit.disabled = true;
+    el.actError.hidden = true;
+
+    try {
+      const res = await fetch('api/activity', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ name, activityStart: skipped ? null : activity.picked, skipped })
+      });
+      if (!res.ok) throw new Error('activity ' + res.status);
+    } catch {
+      el.actSubmit.removeAttribute('aria-busy');
+      el.actError.textContent = 'that didn\u2019t send. check your connection and try again.';
+      el.actError.hidden = false;
+      refreshActivity();
+      return;
+    }
+
+    rememberName(name);
+    el.actSubmit.removeAttribute('aria-busy');
+    activity.done = true;
+    const first = name.split(/\s+/)[0].toLowerCase();
+    el.actConfirm.textContent = skipped
+      ? (first ? `see you at 9, ${first}.` : 'see you at 9.')
+      : (first ? `lovely, ${first}. ${activity.picked}pm it is.` : `${activity.picked}pm it is.`);
+    el.actAsk.hidden = true;
+    el.actDone.hidden = false;
+    el.actOnward.focus();
+  }
+
+  const onActivityRoute = () => /^\/activity\/?$/.test(location.pathname);
+
+  actTimes.forEach((btn) => btn.addEventListener('click', () => {
+    activity.picked = Number(btn.dataset.hour);
+    actTimes.forEach((b) => b.setAttribute('aria-pressed', String(b === btn)));
+    refreshActivity();
+  }));
+
+  el.actName.addEventListener('input', refreshActivity);
+  el.actSubmit.addEventListener('click', () => sendActivity(false));
+  $('act-skip').addEventListener('click', () => sendActivity(true));
+  $('act-close').addEventListener('click', () => closeActivity(false));
+  el.actOnward.addEventListener('click', () => closeActivity(true));
+  $('activity-reopen-btn').addEventListener('click', () => openActivity({ onward: 'home' }));
+
+  el.actScrim.addEventListener('mousedown', (e) => { if (e.target === el.actScrim) closeActivity(false); });
+
+  document.addEventListener('keydown', (e) => {
+    if (el.actScrim.hidden) return;
+    if (e.key === 'Escape') { closeActivity(false); return; }
+    if (e.key !== 'Tab') return;
+    const focusable = Array.from(el.actPanel.querySelectorAll('button:not([disabled]), input'))
+      .filter((n) => n.offsetParent !== null);
+    if (!focusable.length) return;
+    const first = focusable[0], last = focusable[focusable.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  });
+
+  // /activity is the homepage with this modal over it — the backdrop the
+  // handoff asks for is simply the real hero.
+  if (onActivityRoute()) {
+    const fromLink = new URLSearchParams(location.search).get('name') || '';
+    setTimeout(() => openActivity({ name: fromLink, onward: 'home' }), 600);
+  }
 
   applyRsvpedState();
 

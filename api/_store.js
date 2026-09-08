@@ -6,6 +6,7 @@ import { put, list, get, del } from '@vercel/blob';
 export const PUBLIC_PREFIX = 'guests/';
 export const PRIVATE_PREFIX = 'rsvps/';
 export const AVATAR_PREFIX = 'avatars/';
+export const ACTIVITY_PREFIX = 'activity/';
 
 // Everything is written with private access. Blob stores can be configured to
 // refuse public blobs outright, and private works on either kind — so nothing
@@ -102,6 +103,11 @@ export async function deleteRsvp(id) {
   await del([...doomed, ...avatars]);
   return { removed: doomed, avatars: [...avatars], found: true };
 }
+
+// Names are matched loosely: people type "Noemie H" one day and "noemie h"
+// the next, and the RSVP flow already lowercases what it stores.
+export const normalizeName = (value) =>
+  String(value ?? '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 
 export function fail(res, status, error) {
   res.status(status).json({ error });

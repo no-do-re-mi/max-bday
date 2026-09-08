@@ -78,6 +78,7 @@ const upload = (await import('../api/upload.js')).default;
 const admin  = (await import('../api/admin.js')).default;
 const diag   = (await import('../api/diag.js')).default;
 const avatar = (await import('../api/avatar.js')).default;
+const activity = (await import('../api/activity.js')).default;
 const { configured } = await import('../api/_store.js');
 
 function mockRes() {
@@ -434,4 +435,82 @@ test('admin rejects methods other than GET and DELETE', async () => {
   const res = await call(admin, { method: 'POST', headers: { 'x-admin-key': 'let-me-in' }, query: {} });
   assert.equal(res.statusCode, 405);
   assert.equal(res.headers.Allow, 'GET, DELETE');
+});
+
+
+/* ── structured activity ────────────────────────────────────── */
+
+const act = (body) => call(activity, post(body));
+
+test('an activity response needs a name, and a time unless skipping', async () => {
+  store.clear();
+  assert.equal((await act({ name: '', activityStart: 5 })).body.error, 'name_required');
+  assert.equal((await act({ name: 'jo' })).body.error, 'time_required');
+  assert.equal((await act({ name: 'jo', activityStart: 9 })).body.error, 'time_required');
+  assert.equal((await act({ name: 'jo', skipped: true })).statusCode, 201, 'skipping needs no time');
+  assert.equal((await act({ name: 'jo', activityStart: 6 })).statusCode, 201);
+});
+
+test('a response matches the rsvp with the same name, however it is typed', async () => {
+  store.clear();
+  await call(rsvp, post({ ...GOING, name: 'Noemie Heinen' }));
+  const res = await act({ name: '  NOEMIE   heinen ', activityStart: 7 });
+  assert.equal(res.statusCode, 201);
+  assert.equal(res.body.matched, true);
+
+  const record = JSON.parse([...store.values()].find((v) => v.pathname.startsWith('activity/')).body);
+  assert.equal(record.activityStart, 7);
+  assert.equal(record.matched, true);
+  assert.ok(record.rsvpId, 'carries the rsvp it belongs to');
+});
+
+test('a response from someone with no rsvp is still recorded, just unmatched', async () => {
+  store.clear();
+  const res = await act({ name: 'gatecrasher', activityStart: 5 });
+  assert.equal(res.statusCode, 201);
+  assert.equal(res.body.matched, false);
+  const record = JSON.parse([...store.values()].find((v) => v.pathname.startsWith('activity/')).body);
+  assert.equal(record.rsvpId, null);
+});
+
+// Two guests with the same name is a tie this can't break; better unmatched
+// than attached to the wrong person.
+test('an ambiguous name is left unmatched rather than guessed', async () => {
+  store.clear();
+  await call(rsvp, post({ ...GOING, name: 'chris' }));
+  await call(rsvp, post({ ...GOING, name: 'Chris' }));
+  assert.equal((await act({ name: 'chris', activityStart: 6 })).body.matched, false);
+});
+
+test('a decline is not matched — they are not coming to the activity either', async () => {
+  store.clear();
+  await call(rsvp, post({ going: false, name: 'sam', why: 'venus' }));
+  assert.equal((await act({ name: 'sam', activityStart: 5 })).body.matched, false);
+});
+
+test('admin joins activity answers onto the guests and totals them', async () => {
+  store.clear();
+  await call(rsvp, post({ ...GOING, name: 'ana', plusOne: true }));
+  await call(rsvp, post({ ...GOING, name: 'ben', plusOne: false }));
+  await act({ name: 'ana', activityStart: 6 });
+  await act({ name: 'ben', skipped: true });
+  await act({ name: 'stranger', activityStart: 5 });
+
+  const res = await call(admin, get({ key: 'let-me-in' }));
+  assert.equal(res.statusCode, 200);
+  const ana = res.body.going.find((g) => g.name === 'ana');
+  const ben = res.body.going.find((g) => g.name === 'ben');
+  assert.equal(ana.activityStart, 6);
+  assert.equal(ben.activitySkipped, true);
+  assert.equal(res.body.activity.joining, 2);
+  assert.equal(res.body.activity.skipping, 1);
+  assert.deepEqual(res.body.activity.byHour, [{hour:5,count:1},{hour:6,count:1},{hour:7,count:0}]);
+  assert.deepEqual(res.body.activity.unmatched.map((a) => a.name), ['stranger']);
+});
+
+test('activity rejects non-POST and reports an unconfigured store', async () => {
+  assert.equal((await call(activity, get())).statusCode, 405);
+  delete process.env.BLOB_READ_WRITE_TOKEN;
+  assert.equal((await act({ name: 'jo', activityStart: 5 })).statusCode, 503);
+  process.env.BLOB_READ_WRITE_TOKEN = 'test-token';
 });

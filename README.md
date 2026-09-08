@@ -87,6 +87,7 @@ with the key reads every phone number. Keep it to yourself.
 | `/api/avatar` | GET | Streams a stored photo back to the browser. `avatars/` only. |
 | `/api/admin` | GET | Every record, with phone numbers and excuses. Needs `ADMIN_KEY`. |
 | `/api/admin?id=…` | DELETE | Removes one RSVP — card, record and photo. Needs `ADMIN_KEY`. |
+| `/api/activity` | POST | Records a structured-activity reply and joins it to an RSVP by name. |
 | `/api/diag` | GET | Writes, reads back, lists and deletes a test blob, and reports which credential env vars are present. Needs `ADMIN_KEY`. Start here when storage misbehaves. |
 
 Each RSVP is written as **two** blobs: a card under `guests/` (name, avatar,
@@ -139,6 +140,31 @@ npx serve .          # static only — /api/* will 404 and the fallback kicks in
 vercel dev           # the real thing, functions included
 npm test             # API tests (validation, privacy split, admin auth)
 ```
+
+## The structured activity
+
+`/activity` is the homepage with the activity modal over it — a Vercel rewrite,
+not a second page, so the "dimmed restatement of the homepage" the handoff asks
+for behind the modal is the actual homepage. The modal auto-opens after 600ms;
+`close` reveals the hero with a link to reopen it.
+
+It appears in two places:
+- **After a first-time RSVP**, between "send it" and the guest list.
+- **At `/activity`**, for people who RSVP'd before it existed. Send them
+  `itsmaxsbirthday.com/activity?name=jane` to prefill the field, or plain
+  `/activity` and it fills in from the name they typed when they RSVP'd on that
+  device.
+
+Replies are matched to an existing RSVP by name, normalised for case and
+punctuation. A name matching **two** guests is left unmatched rather than
+guessed at, and a reply from someone with no RSVP is still recorded — both show
+under "activity replies with no matching rsvp" on `/admin` for you to reconcile.
+
+The handoff specifies Instrument Serif on pure white; it also says the real site
+wins where the two conflict, so the modal is set in the site's own faces and
+cream palette. The sparkle treatment, copy, hairline controls and motion follow
+the spec. The 0.92 scrim assumed a mock backdrop — over the real hero the
+headline's glow punched through, so the page behind is dimmed as well.
 
 ## Design notes
 

@@ -65,6 +65,9 @@
     <p class="rsvp-again" id="rsvp-again" hidden>
       <button type="button" id="rsvp-again-btn">not you? rsvp again</button>
     </p>
+    <p class="rsvp-again" id="activity-reopen" hidden>
+      <button type="button" id="activity-reopen-btn">the structured activity</button>
+    </p>
     <p class="rsvp-again" id="already-rsvped">
       <button type="button" id="already-btn">already rsvp&rsquo;d? see who&rsquo;s coming</button>
     </p>
@@ -164,6 +167,55 @@
       <p class="missed">you&rsquo;ll be missed</p>
       <button type="button" class="btn-ghost" id="decline-close">close</button>
     </div>
+  </div>
+</div>
+
+<!-- ── structured activity modal ────────────────────────────── -->
+<div class="scrim act-scrim" id="activity-scrim" hidden>
+  <div class="act-dialog" role="dialog" aria-modal="true" aria-labelledby="act-question" id="activity-panel" tabindex="-1">
+
+    <div id="act-ask">
+      <p class="act-kicker">before the party</p>
+      <h2 class="act-question" id="act-question">Hi! There will be a <span class="sparkle">structured activity
+        <i class="sp s1" aria-hidden="true">✦</i>
+        <i class="sp s2" aria-hidden="true">✦</i>
+        <i class="sp s3" aria-hidden="true">✦</i>
+        <i class="sp s4" aria-hidden="true">✦</i>
+        <i class="sp s5" aria-hidden="true">✦</i>
+        <i class="sp s6" aria-hidden="true">✦</i>
+        <i class="sp s7" aria-hidden="true">✦</i>
+        <i class="sp s8" aria-hidden="true">✦</i>
+        <i class="dust d1" aria-hidden="true"></i>
+        <i class="dust d2" aria-hidden="true"></i>
+      </span> leading into the party. Are you free to join? If so, from when are you free</h2>
+
+      <div class="act-times" role="group" aria-label="what time are you free from">
+        <button type="button" class="act-time" data-hour="5" aria-pressed="false">5pm</button>
+        <button type="button" class="act-time" data-hour="6" aria-pressed="false">6pm</button>
+        <button type="button" class="act-time" data-hour="7" aria-pressed="false">7pm</button>
+      </div>
+
+      <p class="act-field">
+        <input id="act-name" type="text" placeholder="your name" aria-label="your name" autocomplete="name" maxlength="60">
+      </p>
+
+      <p class="act-note">The structured activity will end at ~9pm so if you want to miss it, join us then, or you can also join in between and be absorbed by it.</p>
+
+      <p class="act-error" id="act-error" role="alert" hidden></p>
+
+      <div class="act-actions">
+        <button type="button" class="act-submit" id="act-submit" disabled>pick a time</button>
+        <button type="button" class="act-skip" id="act-skip">i&rsquo;ll come at 9ish or later instead</button>
+      </div>
+    </div>
+
+    <div id="act-done" hidden>
+      <h2 class="act-confirm" id="act-confirm"></h2>
+      <p class="act-sub">15 sheridan square. the activity wraps around 9pm, the party carries on after.</p>
+      <button type="button" class="act-link" id="act-onward">back to the site</button>
+    </div>
+
+    <button type="button" class="act-close" id="act-close" aria-label="close">close</button>
   </div>
 </div>
 

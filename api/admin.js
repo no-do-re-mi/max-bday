@@ -1,6 +1,6 @@
 import {
-  PRIVATE_PREFIX, configured, readAll, deleteRsvp, isSafeId,
-  fail, requireAdmin
+  PRIVATE_PREFIX, ACTIVITY_PREFIX, configured, readAll, deleteRsvp, isSafeId,
+  normalizeName, fail, requireAdmin
 } from './_store.js';
 
 // The host's view: every RSVP with phone numbers and excuses, plus the ability
@@ -18,13 +18,40 @@ export default async function handler(req, res) {
 
 async function listAll(res) {
   try {
-    const all = await readAll(PRIVATE_PREFIX);
+    const [all, activity] = await Promise.all([
+      readAll(PRIVATE_PREFIX),
+      readAll(ACTIVITY_PREFIX).catch(() => [])
+    ]);
     const going = all.filter((r) => r.going);
+
+    // Latest answer wins, so someone who changes their mind just re-submits.
+    const byRsvp = new Map();
+    const byName = new Map();
+    for (const a of activity) {
+      if (a.rsvpId) byRsvp.set(a.rsvpId, a);
+      byName.set(normalizeName(a.name), a);
+    }
+    const answerFor = (r) => byRsvp.get(r.id) || byName.get(normalizeName(r.name)) || null;
+
+    const withActivity = going.map((r) => {
+      const a = answerFor(r);
+      return { ...r, activityStart: a ? a.activityStart : undefined,
+               activitySkipped: a ? a.skipped : undefined };
+    });
+
+    const claimed = new Set(withActivity.map((r) => answerFor(r)).filter(Boolean).map((a) => a.id));
+
     res.status(200).json({
       total: all.length,
       headcount: going.length + going.filter((r) => r.plusOne).length,
-      going,
-      notGoing: all.filter((r) => !r.going)
+      going: withActivity,
+      notGoing: all.filter((r) => !r.going),
+      activity: {
+        joining: activity.filter((a) => !a.skipped).length,
+        skipping: activity.filter((a) => a.skipped).length,
+        byHour: [5, 6, 7].map((h) => ({ hour: h, count: activity.filter((a) => a.activityStart === h).length })),
+        unmatched: activity.filter((a) => !claimed.has(a.id))
+      }
     });
   } catch (err) {
     console.error('admin read failed', err);
