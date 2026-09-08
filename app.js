@@ -30,6 +30,7 @@
     actSubmit:   $('act-submit'),
     actError:    $('act-error'),
     actConfirm:  $('act-confirm'),
+    actSub:      $('act-sub'),
     actOnward:   $('act-onward'),
     actReopen:   $('activity-reopen'),
     faqTrigger:  $('faq-trigger'),
@@ -565,6 +566,11 @@
     el.actConfirm.textContent = skipped
       ? (first ? `see you at 9, ${first}.` : 'see you at 9.')
       : (first ? `lovely, ${first}. ${activity.picked}pm it is.` : `${activity.picked}pm it is.`);
+    // Where the activity happens isn't public, so joiners get told they'll be
+    // texted. Anyone arriving at 9 is coming to the party address as printed.
+    el.actSub.textContent = skipped
+      ? 'the party is at 15 sheridan square, from 9pm.'
+      : 'noemie will text you with exactly when and where to meet.';
     el.actAsk.hidden = true;
     el.actDone.hidden = false;
     el.actOnward.focus();

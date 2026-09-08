@@ -155,6 +155,10 @@ It appears in two places:
   `/activity` and it fills in from the name they typed when they RSVP'd on that
   device.
 
+The confirmation differs by path: someone joining is told noemie will text them
+the meeting point (the activity's location isn't public), while someone coming
+at 9ish gets the party address as printed on the invite.
+
 Replies are matched to an existing RSVP by name, normalised for case and
 punctuation. A name matching **two** guests is left unmatched rather than
 guessed at, and a reply from someone with no RSVP is still recorded — both show
