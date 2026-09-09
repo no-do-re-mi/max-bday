@@ -110,14 +110,18 @@ h2 { margin:44px 0 16px; font-size:12px; letter-spacing:.3em; text-transform:upp
     <div class="bar">
       <button class="btn btn-ghost" id="refresh" type="button">refresh</button>
       <button class="btn btn-ghost" id="copy" type="button">copy phone numbers</button>
+      <button class="btn btn-ghost" id="copy-chase" type="button">copy numbers to chase</button>
       <button class="btn btn-ghost" id="csv" type="button">download csv</button>
       <button class="btn btn-ghost" id="forget" type="button">forget key</button>
     </div>
 
     <p class="err" id="panel-err" hidden></p>
 
-    <h2>coming</h2>
-    <div class="rows" id="going"></div>
+    <h2>coming — <span id="h-waiting">no activity answer yet</span></h2>
+    <div class="rows" id="going-waiting"></div>
+
+    <h2>coming — <span id="h-answered">answered about the activity</span></h2>
+    <div class="rows" id="going-answered"></div>
 
     <h2>not coming</h2>
     <div class="rows" id="notgoing"></div>
@@ -141,6 +145,7 @@ h2 { margin:44px 0 16px; font-size:12px; letter-spacing:.3em; text-transform:upp
   const $ = (id) => document.getElementById(id);
   const AVATARS = { elbow:'assets/elbow.png', venus:'assets/venus.png', hotdog:'assets/hotdog.png' };
   let data = null;
+  let lastWaiting = [];
 
   const showErr = (m) => { $('err').textContent = m; $('err').hidden = !m; };
   const showPanelErr = (m) => { $('panel-err').textContent = m; $('panel-err').hidden = !m; };
@@ -295,13 +300,28 @@ h2 { margin:44px 0 16px; font-size:12px; letter-spacing:.3em; text-transform:upp
       }
     }
 
-    for (const [id, list, declining] of [['going', going, false], ['notgoing', no, true]]) {
+    // Whoever hasn't answered about the activity is the list worth acting on,
+    // so it leads.
+    const answered = (g) => Boolean(g.activityStart || g.activitySkipped);
+    const waiting = going.filter((g) => !answered(g));
+    const replied = going.filter(answered);
+    lastWaiting = waiting;
+
+    $('h-waiting').textContent = waiting.length
+      ? `no activity answer yet (${waiting.length})` : 'everyone has answered';
+    $('h-answered').textContent = `answered about the activity (${replied.length})`;
+
+    for (const [id, list, declining] of [['going-waiting', waiting, false],
+                                         ['going-answered', replied, false],
+                                         ['notgoing', no, true]]) {
       const box = $(id);
       box.textContent = '';
       if (!list.length) {
         const e = document.createElement('p');
         e.className = 'empty';
-        e.textContent = 'nobody yet';
+        e.textContent = id === 'going-waiting' ? 'nobody outstanding'
+                      : id === 'going-answered' ? 'no answers yet'
+                      : 'nobody yet';
         box.append(e);
         continue;
       }
@@ -346,11 +366,23 @@ h2 { margin:44px 0 16px; font-size:12px; letter-spacing:.3em; text-transform:upp
     setTimeout(() => { $('copy').textContent = 'copy phone numbers'; }, 1800);
   });
 
+  $('copy-chase').addEventListener('click', async () => {
+    const btn = $('copy-chase');
+    const nums = lastWaiting.map((g) => g.phone).filter(Boolean).join(', ');
+    if (!nums) { btn.textContent = 'nobody to chase'; }
+    else {
+      try { await navigator.clipboard.writeText(nums); btn.textContent = `copied ${lastWaiting.length}`; }
+      catch { btn.textContent = 'copy failed'; }
+    }
+    setTimeout(() => { btn.textContent = 'copy numbers to chase'; }, 1800);
+  });
+
   $('csv').addEventListener('click', () => {
     const esc = (v) => '"' + String(v ?? '').replace(/"/g, '""') + '"';
-    const rows = [['name', 'going', 'phone', 'plus one', 'excuse', 'when']];
-    for (const g of data.going || []) rows.push([g.name, 'yes', g.phone, g.plusOne ? 'yes' : 'no', '', g.at ? new Date(g.at).toISOString() : '']);
-    for (const g of data.notGoing || []) rows.push([g.name, 'no', '', '', g.why, g.at ? new Date(g.at).toISOString() : '']);
+    const activityOf = (g) => g.activitySkipped ? '9ish' : g.activityStart ? `${g.activityStart}pm` : 'no answer';
+    const rows = [['name', 'going', 'phone', 'plus one', 'activity', 'excuse', 'when']];
+    for (const g of data.going || []) rows.push([g.name, 'yes', g.phone, g.plusOne ? 'yes' : 'no', activityOf(g), '', g.at ? new Date(g.at).toISOString() : '']);
+    for (const g of data.notGoing || []) rows.push([g.name, 'no', '', '', '', g.why, g.at ? new Date(g.at).toISOString() : '']);
     const blob = new Blob([rows.map((r) => r.map(esc).join(',')).join('\n')], { type: 'text/csv' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);

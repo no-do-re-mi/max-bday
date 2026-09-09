@@ -57,7 +57,10 @@ ever changes, `grep itsmaxsbirthday.com index.html` finds all of them.
 Go to **`/admin`** and enter your `ADMIN_KEY`. It lists everyone coming with
 tappable phone numbers, plus-ones and avatars, everyone who declined with their
 excuse, and a headcount that counts plus-ones. It can copy all the numbers to
-the clipboard for a group text, or download the lot as CSV. Each row has a
+the clipboard for a group text, or download the lot as CSV. The people
+coming are split by whether they have answered about the activity, with the
+outstanding ones first — that list is the one worth acting on, and **copy
+numbers to chase** puts just their numbers on the clipboard. Each row has a
 **remove** button for clearing out duplicates — two taps, and it deletes the
 guest card, the full record and their uploaded photo together. The key is
 remembered in that browser until you hit "forget key", and travels in a header
