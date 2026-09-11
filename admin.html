@@ -159,7 +159,12 @@ h2 { margin:44px 0 16px; font-size:12px; letter-spacing:.3em; text-transform:upp
         ? 'No ADMIN_KEY is set on the project yet. Add it in Vercel, redeploy, then try again.'
         : 'Storage is not connected yet. Connect the Blob store and redeploy.');
     }
-    if (!res.ok) throw new Error('Could not load RSVPs (error ' + res.status + '). Try again in a moment.');
+    if (!res.ok) {
+      const b = await res.json().catch(() => ({}));
+      throw new Error(b.detail
+        ? `Could not read storage: ${b.detail}`
+        : `Could not load RSVPs (error ${res.status}). Try again in a moment.`);
+    }
     return res.json();
   }
 

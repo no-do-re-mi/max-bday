@@ -69,7 +69,11 @@ async function listAll(res) {
     });
   } catch (err) {
     console.error('admin read failed', err);
-    fail(res, 502, 'read_failed');
+    res.status(502).json({
+      error: 'read_failed',
+      detail: String(err && err.message).slice(0, 300),
+      hint: 'Storage could not be read. Check /api/diag, and the Blob store in Vercel.'
+    });
   }
 }
 

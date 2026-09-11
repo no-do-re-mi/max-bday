@@ -48,10 +48,26 @@ export async function readJson(pathname) {
 export async function readAll(prefix) {
   const { blobs } = await list({ prefix, limit: 1000 });
   const settled = await Promise.allSettled(blobs.map((blob) => readJson(blob.pathname)));
-  return settled
+  const ok = settled
     .filter((r) => r.status === 'fulfilled' && r.value && typeof r.value === 'object')
-    .map((r) => r.value)
-    .sort((a, b) => (a.at || 0) - (b.at || 0));
+    .map((r) => r.value);
+
+  // Tolerating one unreadable record is right; quietly returning an empty
+  // list when every record failed is not — that renders as "you have no
+  // guests" when the truth is that storage is unreachable. Fail loudly.
+  const failed = settled.filter((r) => r.status === 'rejected');
+  if (blobs.length > 0 && ok.length === 0) {
+    const why = failed[0]?.reason;
+    throw new Error(
+      `all ${blobs.length} record(s) under ${prefix} failed to read: ${why && why.message}`
+    );
+  }
+  if (failed.length) {
+    console.error(`readAll(${prefix}): ${failed.length} of ${blobs.length} unreadable`,
+      failed[0]?.reason);
+  }
+
+  return ok.sort((a, b) => (a.at || 0) - (b.at || 0));
 }
 
 // The browser-facing URL for a stored avatar. Only ever built here, from a

@@ -44,7 +44,10 @@ function fakeDel(target) {
 
 // Private-store semantics: content is reachable only through get(), by
 // pathname, with credentials — never by fetching the URL.
+const fakeGetRef = { fn: null };
+
 function fakeGet(pathname, opts = {}) {
+  if (fakeGetRef.fn) return fakeGetRef.fn(pathname, opts);
   if (opts.access !== 'private') {
     return Promise.reject(new Error('Vercel Blob: Cannot use public access on a private store.'));
   }
@@ -56,6 +59,20 @@ function fakeGet(pathname, opts = {}) {
     blob: { pathname, contentType: hit.contentType || 'application/octet-stream' }
   });
 }
+
+function baseGet(pathname, opts = {}) {
+  if (opts.access !== 'private') {
+    return Promise.reject(new Error('Vercel Blob: Cannot use public access on a private store.'));
+  }
+  const hit = [...store.values()].find((v) => v.pathname === pathname);
+  if (!hit) return Promise.resolve(null);
+  return Promise.resolve({
+    statusCode: 200,
+    stream: new Response(hit.body).body,
+    blob: { pathname, contentType: hit.contentType || 'application/octet-stream' }
+  });
+}
+fakeGetRef.fn = baseGet;
 
 mock.module('@vercel/blob', {
   namedExports: { put: fakePut, list: fakeList, del: fakeDel, get: fakeGet }
@@ -530,4 +547,45 @@ test('activity rejects non-POST and reports an unconfigured store', async () => 
   delete process.env.BLOB_READ_WRITE_TOKEN;
   assert.equal((await act({ name: 'jo', activityStart: 5 })).statusCode, 503);
   process.env.BLOB_READ_WRITE_TOKEN = 'test-token';
+});
+
+/* ── failure honesty ────────────────────────────────────────── */
+
+test('readAll throws rather than reporting an empty list when every read fails', async () => {
+  store.clear();
+  await call(rsvp, post({ ...GOING, name: 'real guest' }));
+
+  const realGet = fakeGetRef.fn;
+  fakeGetRef.fn = () => Promise.reject(new Error('Vercel Blob: forbidden'));
+  const res = await call(admin, get({ key: 'let-me-in' }));
+  fakeGetRef.fn = realGet;
+
+  assert.equal(res.statusCode, 502, 'must not answer 200 with an empty guest list');
+  assert.equal(res.body.error, 'read_failed');
+  assert.match(res.body.detail, /forbidden/);
+});
+
+test('a single unreadable record does not hide the rest', async () => {
+  store.clear();
+  await call(rsvp, post({ ...GOING, name: 'alpha' }));
+  await call(rsvp, post({ ...GOING, name: 'bravo' }));
+
+  let first = true;
+  const realGet = fakeGetRef.fn;
+  fakeGetRef.fn = (pathname, opts) => {
+    if (first && pathname.startsWith('rsvps/')) { first = false; return Promise.reject(new Error('one bad blob')); }
+    return realGet(pathname, opts);
+  };
+  const res = await call(admin, get({ key: 'let-me-in' }));
+  fakeGetRef.fn = realGet;
+
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.body.going.length, 1, 'the readable guest still comes through');
+});
+
+test('a genuinely empty store still reports an empty list, not an error', async () => {
+  store.clear();
+  const res = await call(admin, get({ key: 'let-me-in' }));
+  assert.equal(res.statusCode, 200);
+  assert.deepEqual(res.body.going, []);
 });
