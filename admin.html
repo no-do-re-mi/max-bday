@@ -6,8 +6,8 @@
 <meta name="robots" content="noindex, nofollow">
 <title>rsvps — max's birthday</title>
 <link rel="icon" href="/assets/venus.png">
-<link rel="preload" href="fonts/space-mono-400.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="preload" href="fonts/space-mono-700.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/fonts/space-mono-400.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/fonts/space-mono-700.woff2" as="font" type="font/woff2" crossorigin>
 <style>
 @font-face { font-family:"Orbitron"; font-weight:800; font-display:swap; src:url("fonts/orbitron-800.woff2") format("woff2"); }
 @font-face { font-family:"Space Mono"; font-weight:400; font-display:swap; src:url("fonts/space-mono-400.woff2") format("woff2"); }
@@ -143,7 +143,7 @@ h2 { margin:44px 0 16px; font-size:12px; letter-spacing:.3em; text-transform:upp
   'use strict';
   const KEY_STORE = 'max-birthday:admin-key';
   const $ = (id) => document.getElementById(id);
-  const AVATARS = { elbow:'assets/elbow.png', venus:'assets/venus.png', hotdog:'assets/hotdog.png' };
+  const AVATARS = { elbow:'/assets/elbow.png', venus:'/assets/venus.png', hotdog:'/assets/hotdog.png' };
   let data = null;
   let lastWaiting = [];
 
@@ -151,7 +151,7 @@ h2 { margin:44px 0 16px; font-size:12px; letter-spacing:.3em; text-transform:upp
   const showPanelErr = (m) => { $('panel-err').textContent = m; $('panel-err').hidden = !m; };
 
   async function load(key) {
-    const res = await fetch('api/admin', { headers: { 'x-admin-key': key }, cache: 'no-store' });
+    const res = await fetch('/api/admin', { headers: { 'x-admin-key': key }, cache: 'no-store' });
     if (res.status === 401) throw new Error('That key was not accepted. Check it in Vercel under Settings → Environments → Production.');
     if (res.status === 503) {
       const b = await res.json().catch(() => ({}));
@@ -248,7 +248,7 @@ h2 { margin:44px 0 16px; font-size:12px; letter-spacing:.3em; text-transform:upp
       btn.textContent = 'removing…';
       try {
         const key = localStorage.getItem(KEY_STORE);
-        const res = await fetch('api/admin?id=' + encodeURIComponent(r.id), {
+        const res = await fetch('/api/admin?id=' + encodeURIComponent(r.id), {
           method: 'DELETE',
           headers: { 'x-admin-key': key }
         });

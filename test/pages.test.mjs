@@ -34,7 +34,24 @@ test('each page points its preview card at its own url and image', () => {
 
 test('both pages load the same stylesheet and script', () => {
   for (const page of ['index.html', 'activity.html']) {
-    assert.match(read(page), /<link rel="stylesheet" href="styles\.css">/);
-    assert.match(read(page), /<script src="app\.js"><\/script>/);
+    assert.match(read(page), /<link rel="stylesheet" href="\/styles\.css">/);
+    assert.match(read(page), /<script src="\/app\.js"><\/script>/);
+  }
+});
+
+// /activity/ is a URL our own rewrite allows, and a relative path there
+// resolves under /activity/ instead of the root — which silently breaks the
+// stylesheet, the script and every API call on that page.
+test('no page uses a relative path for an asset or an api call', () => {
+  for (const page of ['index.html', 'activity.html', 'admin.html']) {
+    const html = read(page);
+    for (const m of html.matchAll(/(?:href|src)="([^"]+)"/g)) {
+      const v = m[1];
+      if (/^(https?:|data:|#|\/)/.test(v)) continue;
+      assert.fail(`${page}: relative reference "${v}" breaks at /activity/`);
+    }
+    for (const m of html.matchAll(/fetch\(\s*['"`]([^'"`]+)/g)) {
+      assert.ok(m[1].startsWith('/'), `${page}: relative fetch "${m[1]}"`);
+    }
   }
 });

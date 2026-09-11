@@ -451,41 +451,58 @@ test('an activity response needs a name, and a time unless skipping', async () =
   assert.equal((await act({ name: 'jo', activityStart: 6 })).statusCode, 201);
 });
 
-test('a response matches the rsvp with the same name, however it is typed', async () => {
+// Matching happens where the data is read, not where it is written: the
+// write path stays a single blob put so a guest's reply can't be lost to a
+// slow scan of every RSVP.
+const answersFor = async (name) => {
+  const res = await call(admin, get({ key: 'let-me-in' }));
+  return res.body.going.find((g) => g.name === name);
+};
+
+test('a response is matched to the rsvp with the same name, however it is typed', async () => {
   store.clear();
   await call(rsvp, post({ ...GOING, name: 'Noemie Heinen' }));
-  const res = await act({ name: '  NOEMIE   heinen ', activityStart: 7 });
-  assert.equal(res.statusCode, 201);
-  assert.equal(res.body.matched, true);
-
-  const record = JSON.parse([...store.values()].find((v) => v.pathname.startsWith('activity/')).body);
-  assert.equal(record.activityStart, 7);
-  assert.equal(record.matched, true);
-  assert.ok(record.rsvpId, 'carries the rsvp it belongs to');
+  assert.equal((await act({ name: '  NOEMIE   heinen ', activityStart: 7 })).statusCode, 201);
+  assert.equal((await answersFor('noemie heinen')).activityStart, 7);
 });
 
-test('a response from someone with no rsvp is still recorded, just unmatched', async () => {
+test('the write path stores the reply without reading any rsvp', async () => {
   store.clear();
-  const res = await act({ name: 'gatecrasher', activityStart: 5 });
-  assert.equal(res.statusCode, 201);
-  assert.equal(res.body.matched, false);
-  const record = JSON.parse([...store.values()].find((v) => v.pathname.startsWith('activity/')).body);
-  assert.equal(record.rsvpId, null);
+  await call(rsvp, post({ ...GOING, name: 'someone' }));
+  const before = store.size;
+  assert.equal((await act({ name: 'someone', activityStart: 5 })).statusCode, 201);
+  assert.equal(store.size, before + 1, 'exactly one new blob');
+  const rec = JSON.parse([...store.values()].find((v) => v.pathname.startsWith('activity/')).body);
+  assert.deepEqual(Object.keys(rec).sort(), ['activityStart', 'at', 'id', 'name', 'skipped']);
 });
 
-// Two guests with the same name is a tie this can't break; better unmatched
-// than attached to the wrong person.
-test('an ambiguous name is left unmatched rather than guessed', async () => {
+test('a response from someone with no rsvp is recorded and shown as unmatched', async () => {
+  store.clear();
+  assert.equal((await act({ name: 'gatecrasher', activityStart: 5 })).statusCode, 201);
+  const res = await call(admin, get({ key: 'let-me-in' }));
+  assert.deepEqual(res.body.activity.unmatched.map((a) => a.name), ['gatecrasher']);
+});
+
+test('an ambiguous name is left unmatched rather than pinned on the wrong guest', async () => {
   store.clear();
   await call(rsvp, post({ ...GOING, name: 'chris' }));
   await call(rsvp, post({ ...GOING, name: 'Chris' }));
-  assert.equal((await act({ name: 'chris', activityStart: 6 })).body.matched, false);
+  await act({ name: 'chris', activityStart: 6 });
+
+  const res = await call(admin, get({ key: 'let-me-in' }));
+  for (const g of res.body.going) {
+    assert.equal(g.activityStart, undefined, 'neither chris gets the answer');
+  }
+  assert.deepEqual(res.body.activity.unmatched.map((a) => a.name), ['chris']);
 });
 
 test('a decline is not matched — they are not coming to the activity either', async () => {
   store.clear();
   await call(rsvp, post({ going: false, name: 'sam', why: 'venus' }));
-  assert.equal((await act({ name: 'sam', activityStart: 5 })).body.matched, false);
+  await act({ name: 'sam', activityStart: 5 });
+  const res = await call(admin, get({ key: 'let-me-in' }));
+  assert.equal(res.body.going.length, 0);
+  assert.deepEqual(res.body.activity.unmatched.map((a) => a.name), ['sam']);
 });
 
 test('admin joins activity answers onto the guests and totals them', async () => {

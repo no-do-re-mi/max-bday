@@ -132,7 +132,7 @@
 
   async function loadGuests(fresh = false) {
     try {
-      const res = await fetch(fresh ? 'api/guests?fresh=1' : 'api/guests', {
+      const res = await fetch(fresh ? '/api/guests?fresh=1' : '/api/guests', {
         headers: { accept: 'application/json' },
         cache: 'no-store'
       });
@@ -355,7 +355,7 @@
   // Returns { path, url }: the path is what the server validates and stores,
   // the url is what the browser renders.
   async function uploadCustomAvatar() {
-    const res = await fetch('api/upload', {
+    const res = await fetch('/api/upload', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ dataUrl: state.customDataUrl })
@@ -389,7 +389,7 @@
         src = uploaded.url;
       }
 
-      const res = await fetch('api/rsvp', {
+      const res = await fetch('/api/rsvp', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
@@ -547,13 +547,29 @@
     el.actSubmit.disabled = true;
     el.actError.hidden = true;
 
-    try {
-      const res = await fetch('api/activity', {
+    const payload = JSON.stringify({
+      name, activityStart: skipped ? null : activity.picked, skipped
+    });
+
+    // One retry: this is answered on phones, often on patchy signal, and
+    // losing someone's reply to a single dropped request is not acceptable
+    // when the alternative is waiting another second.
+    const post = async () => {
+      const res = await fetch('/api/activity', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ name, activityStart: skipped ? null : activity.picked, skipped })
+        body: payload
       });
       if (!res.ok) throw new Error('activity ' + res.status);
+    };
+
+    try {
+      try {
+        await post();
+      } catch {
+        await new Promise((r) => setTimeout(r, 900));
+        await post();
+      }
     } catch {
       el.actSubmit.removeAttribute('aria-busy');
       el.actError.textContent = 'that didn\u2019t send. check your connection and try again.';

@@ -28,10 +28,24 @@ async function listAll(res) {
     const byRsvp = new Map();
     const byName = new Map();
     for (const a of activity) {
-      if (a.rsvpId) byRsvp.set(a.rsvpId, a);
+      if (a.rsvpId) byRsvp.set(a.rsvpId, a);   // older replies carry one
       byName.set(normalizeName(a.name), a);
     }
-    const answerFor = (r) => byRsvp.get(r.id) || byName.get(normalizeName(r.name)) || null;
+
+    // Two guests sharing a name is a tie this can't break, so neither gets
+    // the answer — it surfaces as unmatched for the host to sort out, rather
+    // than being pinned on the wrong person.
+    const nameCount = new Map();
+    for (const r of going) {
+      const k = normalizeName(r.name);
+      nameCount.set(k, (nameCount.get(k) || 0) + 1);
+    }
+    const answerFor = (r) => {
+      const byId = byRsvp.get(r.id);
+      if (byId) return byId;
+      const k = normalizeName(r.name);
+      return nameCount.get(k) === 1 ? byName.get(k) || null : null;
+    };
 
     const withActivity = going.map((r) => {
       const a = answerFor(r);

@@ -1,13 +1,15 @@
 import {
-  ACTIVITY_PREFIX, PRIVATE_PREFIX, configured, putJson, readAll,
-  randomId, normalizeName, fail, methodGuard
+  ACTIVITY_PREFIX, configured, putJson, randomId, fail, methodGuard
 } from './_store.js';
 
 const HOURS = [5, 6, 7];
 
-// Records who is coming to the structured activity, and joins it to the
-// guest's existing RSVP by name where one exists. An unmatched response is
-// still stored — better a response we have to reconcile by hand than a lost one.
+// Records who is coming to the structured activity. Deliberately does one
+// thing: write a single blob. It used to read every RSVP first to stamp the
+// matching guest's id on the reply, which meant tens of storage round-trips
+// on a request made from someone's phone — and /api/admin matches these to
+// guests by name when it reads them anyway, so the scan bought nothing and
+// only added ways to fail.
 export default async function handler(req, res) {
   if (!methodGuard(req, res, 'POST')) return;
   if (!configured()) return fail(res, 503, 'not_configured');
@@ -26,31 +28,19 @@ export default async function handler(req, res) {
   const at = Date.now();
 
   try {
-    const match = await findRsvp(name);
     await putJson(`${ACTIVITY_PREFIX}${id}.json`, {
       id, at,
       name: name.toLowerCase(),
       activityStart: skipped ? null : startsAt,
-      skipped,
-      rsvpId: match ? match.id : null,
-      matched: Boolean(match)
+      skipped
     });
-    res.status(201).json({ ok: true, id, matched: Boolean(match) });
+    res.status(201).json({ ok: true, id });
   } catch (err) {
     console.error('activity write failed', err);
     fail(res, 502, 'write_failed');
   }
 }
 
-// Only a single unambiguous match counts. Two guests with the same name is a
-// tie we can't break here, so it's left for the host to sort out.
-async function findRsvp(name) {
-  const target = normalizeName(name);
-  if (!target) return null;
-  const records = await readAll(PRIVATE_PREFIX);
-  const hits = records.filter((r) => r.going && normalizeName(r.name) === target);
-  return hits.length === 1 ? hits[0] : null;
-}
 
 function safeParse(text) {
   try { return JSON.parse(text); } catch { return null; }
