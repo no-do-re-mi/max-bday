@@ -1,5 +1,8 @@
 import { list, del } from '@vercel/blob';
-import { credentialSources, configured, putJson, readJson, randomId, methodGuard, requireAdmin } from './_store.js';
+import {
+  PUBLIC_PREFIX, PRIVATE_PREFIX, ACTIVITY_PREFIX, AVATAR_PREFIX,
+  credentialSources, configured, putJson, readJson, randomId, methodGuard, requireAdmin
+} from './_store.js';
 
 // A real end-to-end check of the blob store: write, read back, list, clean up.
 // Reports which credential env vars are present (never their values) and the
@@ -25,6 +28,19 @@ export default async function handler(req, res) {
     }
   };
 
+  // The first question when the guest list looks empty is whether the records
+  // are still there. Answer it before anything else, and report what the store
+  // holds regardless of whether the records can be read back.
+  const inventory = {};
+  await run('inventory', async () => {
+    for (const [label, prefix] of [['guests', PUBLIC_PREFIX], ['rsvps', PRIVATE_PREFIX],
+                                   ['activity', ACTIVITY_PREFIX], ['avatars', AVATAR_PREFIX]]) {
+      const { blobs } = await list({ prefix, limit: 1000 });
+      inventory[label] = blobs.length;
+    }
+    return Object.entries(inventory).map(([k, v]) => `${k}: ${v}`).join(', ');
+  });
+
   const pathname = `diag/${randomId()}.json`;
   const token = randomId();
 
@@ -42,6 +58,7 @@ export default async function handler(req, res) {
 
   res.status(ok ? 200 : 500).json({
     ok,
+    recordsInStore: inventory,
     storageConfigured: configured(),
     adminKeySet: true,
     credentials: env,

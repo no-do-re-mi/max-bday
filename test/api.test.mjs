@@ -328,7 +328,11 @@ test('diag round-trips a blob and cleans up after itself', async () => {
   const res = await call(diag, get({ key: 'let-me-in' }));
   assert.equal(res.statusCode, 200);
   assert.equal(res.body.ok, true);
-  assert.deepEqual(res.body.steps.map((s) => s.step), ['write', 'read back', 'list', 'clean up']);
+  assert.deepEqual(res.body.steps.map((s) => s.step),
+    ['inventory', 'write', 'read back', 'list', 'clean up']);
+  // the question people actually have when the list looks empty
+  assert.deepEqual(Object.keys(res.body.recordsInStore).sort(),
+    ['activity', 'avatars', 'guests', 'rsvps']);
   assert.ok(res.body.steps.every((s) => s.ok), 'every step should pass');
   assert.equal(store.size, 0, 'the diagnostic blob should be deleted again');
 });
