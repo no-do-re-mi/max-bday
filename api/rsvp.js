@@ -1,4 +1,4 @@
-import { PUBLIC_PREFIX, PRIVATE_PREFIX, configured, putJson, randomId, avatarUrl, isSafeAvatarPath, fail, methodGuard } from './_store.js';
+import { PUBLIC_PREFIX, PRIVATE_PREFIX, configured, putJson, addToGuestIndex, randomId, avatarUrl, isSafeAvatarPath, fail, methodGuard } from './_store.js';
 
 const PRESETS = ['elbow', 'venus', 'hotdog', 'custom'];
 const clean = (value, max) => String(value ?? '').replace(/\s+/g, ' ').trim().slice(0, max);
@@ -32,9 +32,9 @@ export default async function handler(req, res) {
 
   try {
     if (going) {
-      await putJson(`${PUBLIC_PREFIX}${id}.json`, {
-        id, at, name, avatar, src, plusOne: body.plusOne === true
-      });
+      const card = { id, at, name, avatar, src, plusOne: body.plusOne === true };
+      await putJson(`${PUBLIC_PREFIX}${id}.json`, card);
+      await addToGuestIndex(card);
     }
     await putJson(`${PRIVATE_PREFIX}${id}.json`, {
       id, at, going, name, phone,

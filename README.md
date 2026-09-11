@@ -86,7 +86,7 @@ with the key reads every phone number. Keep it to yourself.
 
 | Route | Method | Does |
 |---|---|---|
-| `/api/guests` | GET | Public guest list. Names, avatars, `+1` flags — nothing else. Cached ~10s; `?fresh=1` bypasses it. |
+| `/api/guests` | GET | Public guest list. Names, avatars, `+1` flags — nothing else. Served from a single index blob and cached at the CDN for 60s; `?fresh=1` bypasses both. |
 | `/api/rsvp` | POST | Records an RSVP. |
 | `/api/upload` | POST | Stores a guest's own profile photo privately, returns its path. |
 | `/api/avatar` | GET | Streams a stored photo back to the browser. `avatars/` only. |
@@ -100,6 +100,20 @@ Each RSVP is written as **two** blobs: a card under `guests/` (name, avatar,
 only ever reads `guests/`, so a phone number is never one request away from the
 open web. Declines are written only to `rsvps/` — they never reach the guest
 list.
+
+### Storage operations
+
+The guest list is read on every page load, and Vercel Blob bills per operation
+— on the Hobby plan, 10,000 a month. Reading each guest's record separately
+made a single page view cost one operation *per guest*, which exhausted the
+quota and took the whole site down: the store refused reads, so every list
+rendered empty.
+
+So the list is served from one blob (`index/guests.json`) and cached at the
+CDN. The per-guest records under `guests/` are still the source of truth; the
+index is only a cache, rebuilt from them whenever it is missing, and dropped
+whenever a guest is removed. `/api/admin` still reads every record, which is
+fine — one person loads it, not every visitor.
 
 **Everything is stored with `access: 'private'.'** Nothing in the store is
 fetchable without our credentials — not the records, not the photos. Blob stores

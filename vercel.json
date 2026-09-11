@@ -11,7 +11,7 @@
       ]
     },
     {
-      "source": "/api/(.*)",
+      "source": "/api/(admin|diag|upload|rsvp|activity)",
       "headers": [
         {
           "key": "Cache-Control",

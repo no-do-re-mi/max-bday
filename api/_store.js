@@ -7,6 +7,7 @@ export const PUBLIC_PREFIX = 'guests/';
 export const PRIVATE_PREFIX = 'rsvps/';
 export const AVATAR_PREFIX = 'avatars/';
 export const ACTIVITY_PREFIX = 'activity/';
+export const INDEX_PATH = 'index/guests.json';
 
 // Everything is written with private access. Blob stores can be configured to
 // refuse public blobs outright, and private works on either kind — so nothing
@@ -117,6 +118,9 @@ export async function deleteRsvp(id) {
   if (!doomed.length) return { removed: [], found: false };
 
   await del([...doomed, ...avatars]);
+  // The index still lists them, and it is only a cache — drop it so the next
+  // read rebuilds from what is actually left.
+  try { await del(INDEX_PATH); } catch { /* already gone */ }
   return { removed: doomed, avatars: [...avatars], found: true };
 }
 
@@ -124,6 +128,63 @@ export async function deleteRsvp(id) {
 // the next, and the RSVP flow already lowercases what it stores.
 export const normalizeName = (value) =>
   String(value ?? '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+
+// The guest list is read on every page load. Reading each guest's record
+// separately made that N storage operations per view, which is what exhausted
+// the store's quota. The list is kept as a single blob instead.
+//
+// It is only ever a cache: the per-guest records under guests/ remain the
+// source of truth, so a missing or damaged index is rebuilt from them rather
+// than being a loss.
+export async function readGuestIndex() {
+  try {
+    const cards = await readJson(INDEX_PATH);
+    if (Array.isArray(cards)) return cards;
+  } catch {
+    // missing or unreadable — fall through and rebuild
+  }
+  return rebuildGuestIndex();
+}
+
+export async function rebuildGuestIndex() {
+  const cards = await readAll(PUBLIC_PREFIX);
+  await put(INDEX_PATH, JSON.stringify(cards), {
+    access: ACCESS,
+    contentType: 'application/json',
+    addRandomSuffix: false,
+    allowOverwrite: true,
+    cacheControlMaxAge: 0
+  });
+  return cards;
+}
+
+// Appends without re-reading every record: two operations per RSVP instead of
+// N. If anything goes wrong the index is dropped, and the next read rebuilds
+// it from the per-guest records.
+export async function addToGuestIndex(card) {
+  try {
+    let cards = [];
+    try {
+      const existing = await readJson(INDEX_PATH);
+      if (Array.isArray(existing)) cards = existing;
+    } catch {
+      return rebuildGuestIndex();
+    }
+    cards.push(card);
+    await put(INDEX_PATH, JSON.stringify(cards), {
+      access: ACCESS,
+      contentType: 'application/json',
+      addRandomSuffix: false,
+      allowOverwrite: true,
+      cacheControlMaxAge: 0
+    });
+    return cards;
+  } catch (err) {
+    console.error('guest index update failed; dropping it to force a rebuild', err);
+    try { await del(INDEX_PATH); } catch { /* already gone */ }
+    return null;
+  }
+}
 
 export function fail(res, status, error) {
   res.status(status).json({ error });

@@ -45,8 +45,10 @@ function fakeDel(target) {
 // Private-store semantics: content is reachable only through get(), by
 // pathname, with credentials — never by fetching the URL.
 const fakeGetRef = { fn: null };
+const getCalls = { n: 0 };
 
 function fakeGet(pathname, opts = {}) {
+  getCalls.n++;
   if (fakeGetRef.fn) return fakeGetRef.fn(pathname, opts);
   if (opts.access !== 'private') {
     return Promise.reject(new Error('Vercel Blob: Cannot use public access on a private store.'));
@@ -174,10 +176,12 @@ test('a going RSVP writes both a public card and a private record', async () => 
   putCalls = 0;
   const res = await call(rsvp, post(GOING));
   assert.equal(res.statusCode, 201);
-  assert.equal(putCalls, 2);
   const paths = [...store.values()].map((v) => v.pathname);
   assert.equal(paths.filter((p) => p.startsWith('guests/')).length, 1);
   assert.equal(paths.filter((p) => p.startsWith('rsvps/')).length, 1);
+  // plus the single-blob index the guest list is served from
+  assert.equal(paths.filter((p) => p === 'index/guests.json').length, 1);
+  assert.equal(putCalls, 3);
 });
 
 test('the public card carries no phone number', async () => {
@@ -409,13 +413,16 @@ test('deleting an rsvp removes both its records', async () => {
   store.clear();
   await call(rsvp, post({ ...GOING, name: 'duplicate dave' }));
   await call(rsvp, post({ ...GOING, name: 'keep me' }));
-  assert.equal(store.size, 4, 'two RSVPs, two blobs each');
+  const records = [...store.values()].filter((v) => !v.pathname.startsWith('index/'));
+  assert.equal(records.length, 4, 'two RSVPs, two blobs each');
 
   const res = await call(admin, { ...del_({ id: idOf('duplicate dave') }), headers: { 'x-admin-key': 'let-me-in' } });
   assert.equal(res.statusCode, 200);
   assert.equal(res.body.removed, 2);
 
-  const left = [...store.values()].map((v) => JSON.parse(v.body).name);
+  const left = [...store.values()]
+    .filter((v) => !v.pathname.startsWith('index/'))
+    .map((v) => JSON.parse(v.body).name);
   assert.deepEqual([...new Set(left)], ['keep me']);
 });
 
@@ -592,4 +599,46 @@ test('a genuinely empty store still reports an empty list, not an error', async 
   const res = await call(admin, get({ key: 'let-me-in' }));
   assert.equal(res.statusCode, 200);
   assert.deepEqual(res.body.going, []);
+});
+
+/* ── the guest index ────────────────────────────────────────── */
+
+const opsFor = async (fn) => {
+  const before = { get: getCalls.n, put: putCalls };
+  await fn();
+  return { get: getCalls.n - before.get, put: putCalls - before.put };
+};
+
+test('reading the guest list costs one read however many guests there are', async () => {
+  store.clear();
+  for (const n of ['a', 'b', 'c', 'd', 'e']) await call(rsvp, post({ ...GOING, name: n }));
+
+  // first read may rebuild; the ones after it are what every page load pays
+  await call(guests, get({ fresh: '1' }));
+  const cost = await opsFor(() => call(guests, get({ fresh: '1' })));
+  assert.equal(cost.get, 1, `five guests should still cost one read, not ${cost.get}`);
+});
+
+test('the guest list is rebuilt from the records if the index is missing', async () => {
+  store.clear();
+  await call(rsvp, post({ ...GOING, name: 'still here' }));
+  for (const [url, v] of store) if (v.pathname === 'index/guests.json') store.delete(url);
+
+  const res = await call(guests, get({ fresh: '1' }));
+  assert.equal(res.statusCode, 200);
+  assert.deepEqual(res.body.guests.map((g) => g.name), ['still here']);
+});
+
+test('a removed guest leaves the public list too', async () => {
+  store.clear();
+  await call(rsvp, post({ ...GOING, name: 'goner' }));
+  await call(rsvp, post({ ...GOING, name: 'stayer' }));
+  await call(guests, get({ fresh: '1' }));           // warm the index
+
+  const id = JSON.parse([...store.values()]
+    .find((v) => v.pathname.startsWith('rsvps/') && JSON.parse(v.body).name === 'goner').body).id;
+  await call(admin, { method: 'DELETE', headers: { 'x-admin-key': 'let-me-in' }, query: { id } });
+
+  const res = await call(guests, get({ fresh: '1' }));
+  assert.deepEqual(res.body.guests.map((g) => g.name), ['stayer']);
 });
