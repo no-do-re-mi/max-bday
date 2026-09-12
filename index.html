@@ -58,10 +58,11 @@
     <h1 class="headline">celebrating max&rsquo;s birthday</h1>
     <p class="details">
       <span>september 12</span>
-      <span class="sep" aria-hidden="true">/</span>
-      <span>15 sheridan square</span>
-      <span class="sep" aria-hidden="true">/</span>
-      <span>8pm</span>
+    </p>
+    <p class="arrival">
+      If you come before 9:00 PM text noemie at
+      <a href="tel:+18622952715">862 295 2715</a>
+      to be directed where to go! After that time, come to Apt 4D 15 Sheridan Square
     </p>
     <button type="button" class="btn-rsvp" id="open-rsvp" data-mode="rsvp">rsvp</button>
     <p class="rsvp-again" id="rsvp-again" hidden>
@@ -77,9 +78,15 @@
 
   <!-- ── view: who's coming ─────────────────────────────────── -->
   <section class="guests" id="view-guests" hidden>
-    <p class="kicker">september 12 / 15 sheridan square / 8pm</p>
+    <p class="kicker">september 12</p>
     <h1 class="guests-title">who&rsquo;s coming</h1>
     <p class="count" id="guest-count">0 in orbit</p>
+    <p class="arrival arrival-guests">
+      If you come before 9:00 PM text noemie at
+      <a href="tel:+18622952715">862 295 2715</a>
+      to be directed where to go! After that time, come to Apt 4D 15 Sheridan Square
+    </p>
+
 
     <div class="guest-grid" id="guest-grid"></div>
 
@@ -103,7 +110,7 @@
 
     <!-- step 1 -->
     <div class="step" id="step-1">
-      <p class="kicker">september 12 / 8pm</p>
+      <p class="kicker">september 12</p>
       <h2 class="question" id="modal-title">are you coming?</h2>
       <div class="choice-row">
         <button type="button" class="pill pill-filled" id="pick-going">going</button>

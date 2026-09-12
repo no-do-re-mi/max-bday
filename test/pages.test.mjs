@@ -47,7 +47,8 @@ test('no page uses a relative path for an asset or an api call', () => {
     const html = read(page);
     for (const m of html.matchAll(/(?:href|src)="([^"]+)"/g)) {
       const v = m[1];
-      if (/^(https?:|data:|#|\/)/.test(v)) continue;
+      // schemes are not path references and cannot resolve wrongly
+      if (/^([a-z][a-z0-9+.-]*:|#|\/)/i.test(v)) continue;
       assert.fail(`${page}: relative reference "${v}" breaks at /activity/`);
     }
     for (const m of html.matchAll(/fetch\(\s*['"`]([^'"`]+)/g)) {

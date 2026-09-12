@@ -812,3 +812,35 @@ body.act-open .floaters { opacity: 0.35; }
   .act-times { gap: 10px; }
   .act-close { margin-top: 30px; }
 }
+
+/* ── arrival instructions ───────────────────────────────────────
+   Day-of logistics, so this is louder than the old aside: full primary
+   colour, and the number is a tel: link because everyone reading this
+   is on a phone and needs to text it. */
+.arrival {
+  max-width: 44ch;
+  margin: 26px auto 0;
+  font-size: clamp(13px, 1.8vw, 18px);
+  line-height: 1.65;
+  letter-spacing: 0.04em;
+  color: var(--primary);
+  text-wrap: pretty;
+}
+.arrival a {
+  color: var(--white);
+  text-decoration: none;
+  border-bottom: 1px solid var(--rule);
+  white-space: nowrap;
+  padding-bottom: 1px;
+  transition: border-color 180ms ease;
+}
+.arrival a:hover { border-bottom-color: var(--white); }
+
+.arrival-guests {
+  margin-left: 0;
+  margin-right: 0;
+  margin-top: 22px;
+  font-size: clamp(13px, 1.5vw, 16px);
+}
+
+.arrival + .btn-rsvp { margin-top: 34px; }
