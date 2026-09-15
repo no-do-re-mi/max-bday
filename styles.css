@@ -814,9 +814,10 @@ body.act-open .floaters { opacity: 0.35; }
 }
 
 /* ── arrival instructions ───────────────────────────────────────
-   Day-of logistics, so this is louder than the old aside: full primary
-   colour, and the number is a tel: link because everyone reading this
-   is on a phone and needs to text it. */
+   Unused: the markup was removed after the party, since the note carried
+   a personal phone number and an apartment number and had no reason to
+   stay on a public page. Kept so the block can be restored without
+   rebuilding it — see .arrival in index.html's history. */
 .arrival {
   max-width: 44ch;
   margin: 26px auto 0;
